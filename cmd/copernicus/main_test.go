@@ -15,7 +15,7 @@ func TestHelp(t *testing.T) {
 			if err := run(context.Background(), args, &output); err != nil {
 				t.Fatal(err)
 			}
-			for _, want := range []string{"Usage:", "copernicus", "not available yet"} {
+			for _, want := range []string{"Usage:", "copernicus", "does not start workers or import results"} {
 				if !strings.Contains(output.String(), want) {
 					t.Fatalf("help = %q, want %q", output.String(), want)
 				}

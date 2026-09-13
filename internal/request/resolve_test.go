@@ -149,6 +149,7 @@ func TestIncompatibleInputsAreRecorded(t *testing.T) {
 		{"controller", "UNSUPPORTED_CONTROLLER", func(c *catalog.Catalog) { c.Controllers[0].Name = "unavailable" }},
 		{"metric", "UNSUPPORTED_METRIC_VERSION", func(c *catalog.Catalog) { c.AnalysisTemplates[0].CollisionCount.Version = 2 }},
 		{"limits", "UNSUPPORTED_LIMITS", func(c *catalog.Catalog) { c.RunTemplates[0].TickMS = 1001 }},
+		{"collision-limit", "UNSUPPORTED_LIMITS", func(c *catalog.Catalog) { c.AnalysisTemplates[0].CollisionCount.Maximum = 1 }},
 		{"geometry", "UNSUPPORTED_GEOMETRY", func(c *catalog.Catalog) { c.Scenarios[1].Obstacles[0].SpeedMMS = 1000001 }},
 		{"coast", "UNSUPPORTED_GEOMETRY", func(c *catalog.Catalog) {
 			c.Scenarios[1].StartPositionMM = 999999998

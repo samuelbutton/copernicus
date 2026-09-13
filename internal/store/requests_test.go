@@ -109,7 +109,7 @@ func TestAtomicResolutionAndImmutability(t *testing.T) {
 	if _, err := s.CreateRequest(ctx, requestInput(), requestSource(t)); err == nil {
 		t.Fatal("accepted partial write")
 	}
-	for _, table := range []string{"requests", "executions"} {
+	for _, table := range []string{"requests", "executions", "outbox"} {
 		var n int
 		if err := s.db.QueryRow("SELECT count(*) FROM " + table).Scan(&n); err != nil {
 			t.Fatal(err)
@@ -264,7 +264,7 @@ func TestSchemaOneUpgradePreservesCatalog(t *testing.T) {
 	if err := upgraded.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version != 2 {
+	if version != 3 {
 		t.Fatal("upgrade did not run")
 	}
 	if !reflect.DeepEqual(before, readStore(t, upgraded)) {
@@ -302,7 +302,7 @@ func TestRequestProcessExitBeforeCommit(t *testing.T) {
 	if _, err := s.db.Exec("DROP TRIGGER crash_request"); err != nil {
 		t.Fatal(err)
 	}
-	for _, table := range []string{"requests", "executions"} {
+	for _, table := range []string{"requests", "executions", "outbox"} {
 		var n int
 		if err := s.db.QueryRow("SELECT count(*) FROM " + table).Scan(&n); err != nil {
 			t.Fatal(err)

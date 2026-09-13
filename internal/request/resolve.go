@@ -80,7 +80,7 @@ func Resolve(c catalog.Catalog, submission Submission, source compatibility.Sour
 		if freezeErr != nil {
 			return Snapshot{}, freezeErr
 		}
-		e.Reason = compatibilityFailure(scenario, run, analysis, controller)
+		e.Reason = CompatibilityFailure(scenario, run, analysis, controller)
 		if e.Reason != "" {
 			e.Status = ResolutionFailed
 			out.Status = ResolutionFailed
@@ -107,9 +107,9 @@ func index[T any](values []T, id func(T) string) map[string]T {
 	return result
 }
 
-// These checks describe the pinned lane example. The file-contract adapter will
-// also validate complete jobs before publication.
-func compatibilityFailure(s catalog.Scenario, r catalog.RunTemplate, a catalog.AnalysisTemplate, c catalog.Controller) string {
+// CompatibilityFailure describes implementation support for the pinned lane example.
+// The adapter additionally validates the complete public job schema.
+func CompatibilityFailure(s catalog.Scenario, r catalog.RunTemplate, a catalog.AnalysisTemplate, c catalog.Controller) string {
 	if s.Type != "lane" {
 		return "UNSUPPORTED_SCENARIO_TYPE"
 	}
@@ -125,7 +125,7 @@ func compatibilityFailure(s catalog.Scenario, r catalog.RunTemplate, a catalog.A
 	if a.CollisionCount.Version != 1 || (a.MinimumObstacleGap.Version != 1 && a.MinimumObstacleGap.Version != 2) || a.GoalProgress.Version != 1 {
 		return "UNSUPPORTED_METRIC_VERSION"
 	}
-	if r.TickMS > 1000 || r.MaxTicks > 100000 || r.TimeoutMS > 600000 || a.MinimumObstacleGap.MinimumMM > 1000000000 {
+	if a.CollisionCount.Maximum != 0 || r.TickMS > 1000 || r.MaxTicks > 100000 || r.TimeoutMS > 600000 || a.MinimumObstacleGap.MinimumMM > 1000000000 {
 		return "UNSUPPORTED_LIMITS"
 	}
 	if s.GoalPositionMM > 1000000000 || len(s.Obstacles) > 32 {

@@ -9,7 +9,9 @@ The project will help a reviewer compare what happened and trace each result bac
 You can import test definitions, organize them into groups, and inspect which tests a collection selects.
 A browser introduction explains the driving example.
 You can save a request that preserves the selected instructions, even after a group changes.
-This version does not start driving simulations or load results yet.
+You can deliver the saved instructions as job files for Yamata to run.
+Delivery can resume after an interruption.
+Loading and comparing results will come later.
 
 ## Technical summary
 
@@ -20,9 +22,11 @@ Help and catalog inspection start no background services.
 The React and TypeScript package builds a static introduction with Vite.
 Both packages build independently and require no other checkout.
 
-Future request handling will exchange versioned files with Yamata.
+The outbox exchanges versioned job files with Yamata.
 The [execution source record](compatibility/yamata.json) pins the reviewed revision and public contract version.
-It records the integration baseline; this version does not import schemas, jobs, results, or engine packages.
+The [copied public contract](compatibility/contract/v1/) supplies schemas and examples without requiring another checkout.
+Compatible jobs commit with their request, then publish through a separate command.
+Publication does not start workers or import results.
 
 ## Build and read the command help
 
@@ -69,6 +73,11 @@ The walkthrough creates a temporary database and includes cleanup commands.
 
 Follow the [request walkthrough](docs/requests.md#create-a-request-and-change-a-suite) to save inputs, edit a suite, and verify the unchanged snapshot.
 The guide also covers repeat-safe submissions, incompatible tests, and cleanup.
+
+## Deliver saved jobs
+
+Follow the [exchange walkthrough](docs/exchange.md#save-a-request-before-publication) to publish saved jobs and resume after an interruption.
+The guide explains delivery status, conflicts, the pinned contract, and optional worker handoff.
 
 ## Open the browser introduction
 

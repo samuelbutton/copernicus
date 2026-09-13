@@ -18,7 +18,7 @@ Keep component rendering pure and expose only real actions.
 Use native links and controls before adding a component dependency.
 Do not show missing results as passing scores.
 
-Future execution integration must use the pinned public file contract.
+Execution integration must use the pinned public file contract.
 Do not import another project's internal packages or open its private database.
 Review the source revision and compatibility examples together when changing that boundary.
 

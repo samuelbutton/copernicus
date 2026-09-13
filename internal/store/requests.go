@@ -62,6 +62,9 @@ func (s *Store) CreateRequest(ctx context.Context, input request.Submission, sou
 			return empty, fmt.Errorf("save execution: %w", err)
 		}
 	}
+	if err := saveJobs(ctx, tx, snapshot); err != nil {
+		return empty, err
+	}
 	var count, size int64
 	if err := tx.QueryRowContext(ctx, "SELECT count(*), coalesce(sum(length(snapshot)), 0) FROM requests").Scan(&count, &size); err != nil {
 		return empty, fmt.Errorf("measure requests: %w", err)

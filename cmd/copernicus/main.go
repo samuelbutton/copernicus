@@ -23,13 +23,16 @@ Usage:
   copernicus request create --db PATH --id ID --collection ID --controller ID --requester ID
                            [--priority 0..3] [--seed N] [--repeat N]
   copernicus request show --db PATH --id ID
+  copernicus outbox show --db PATH
+  copernicus outbox publish --db PATH --exchange-dir PATH [--limit 1..1000]
 
 Import validates a catalog and adds its records in one transaction.
 Show prints the stored definitions. Expand prints ordered, unique tests.
 Help creates no files and starts no services.
-Requests freeze inputs and report resolution failures without dispatching jobs.
-Job submission and result import are not available yet.
-See README.md, docs/test-model.md, and docs/requests.md for examples and cleanup.
+Requests freeze inputs and save compatible jobs in a durable outbox.
+Outbox publication delivers job files. Run it again to resume pending delivery.
+Publication does not start workers or import results.
+See docs/test-model.md, docs/requests.md, and docs/exchange.md for examples and cleanup.
 `
 
 func main() {
@@ -48,11 +51,14 @@ func run(ctx context.Context, args []string, output io.Writer) error {
 		}
 		return nil
 	}
-	if len(args) < 2 || (args[0] != "catalog" && args[0] != "request") {
+	if len(args) < 2 || (args[0] != "catalog" && args[0] != "request" && args[0] != "outbox") {
 		return errors.New("unsupported arguments; use copernicus --help")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	if args[0] == "outbox" {
+		return runOutbox(ctx, args[1:], output)
+	}
 	if args[0] == "request" {
 		return runRequest(ctx, args[1:], output)
 	}

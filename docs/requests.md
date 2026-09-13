@@ -70,7 +70,9 @@ The request's overall resolution status is `RESOLUTION_FAILED` because at least 
 Exit code `0` means the record was saved or read successfully.
 It does not mean that resolution succeeded or that any driving test passed.
 Read `resolution_status` and each execution's `reason` to determine the resolution outcome.
-No command in this version publishes jobs or starts execution.
+Compatible tests also receive jobs in the durable outbox.
+Failed tests receive no job, even when other tests in the request are compatible.
+The separate [publication command](exchange.md) delivers those files; execution workers are started independently.
 
 ## Clean up the walkthrough
 
@@ -137,7 +139,7 @@ Controller content is a named implementation and version, as defined by the cata
 The snapshot also freezes the reviewed Yamata source revision from [the source record](../compatibility/yamata.json).
 This version selects built-in controllers; it does not import arbitrary controller binaries.
 The hashes describe frozen inputs, not proof that execution occurred.
-They are not file-contract job hashes; the later adapter will calculate those after translating inputs.
+The [adapter](../internal/adapter/jobs.go) calculates separate public input and file hashes after translating the frozen inputs.
 
 Execution identifiers derive deterministically from submission details, the test identifier, and the frozen input hashes.
 Distinct tests retain distinct execution identifiers even when their input content matches.
@@ -150,18 +152,20 @@ The [resolver](../internal/request/resolve.go) checks the pinned lane example's 
 Unsupported scenario types and scenario/template mismatches become explicit per-test resolution failures.
 Unsupported controllers, simulators, metrics, geometry, and limits also become resolution failures.
 A missing collection, missing controller, broken reference, or empty selection rejects creation without accepting a request.
-The later file adapter will validate complete jobs before publication.
+The file adapter validates complete jobs against the pinned schema before saving them.
+The publisher validates their saved bytes again before publication.
 
 The [request store](../internal/store/requests.go) reads the catalog and saves the snapshot within one SQLite write transaction.
-It saves the request and all execution records together.
+It saves the request, all execution records, and compatible job bytes together.
 Suite edits use the same transaction discipline, so resolution sees one complete membership version.
 Concurrent identical submissions return one accepted request and one set of execution records.
-A failed write or process exit before commit accepts neither a partial request nor partial execution records.
+A failed write or process exit before commit rolls back the request, execution records, and outgoing jobs.
 
 The [schema migration](../internal/store/requests-v2.sql) adds request storage to existing catalog databases without changing catalog records.
-Write commands upgrade schema version `1` to version `2` in one transaction.
+Write commands now upgrade schema versions `1` and `2` to version `3` in one transaction.
+The [outbox migration](../internal/store/outbox-v3.sql) adds jobs from existing frozen snapshots.
 Catalog inspection can still read version `1` without upgrading it.
-Request inspection requires version `2` and uses a read-only connection.
+Request inspection accepts versions `2` and `3` through a read-only connection.
 Unknown schema versions remain rejected.
 
 Database triggers prevent changing or deleting saved snapshots and initial execution resolution fields.
