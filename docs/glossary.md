@@ -11,6 +11,7 @@ Some terms describe the planned review workflow; the README states which behavio
 | Baseline | The reference controller or request used for a comparison. |
 | Binary | The executable file produced by the Go build. |
 | Candidate | The controller or request compared with the baseline. |
+| Catalog | The stored test definitions, templates, controller references, and ordered groups. |
 | CLI | Command-line interface: commands and options entered in a shell. |
 | Collection | A group of suites. |
 | Content hash | A digest that identifies specified file bytes. |
@@ -20,6 +21,11 @@ Some terms describe the planned review workflow; the README states which behavio
 | Exit code | The number that reports command success or failure to the shell. |
 | Go | The language and toolchain used for the command. |
 | GNU Make | The tool that runs the repository's build and check targets. |
+| JSON | A text format for structured data. |
+| Mebibyte | A unit containing 1,048,576 bytes. |
+| Membership | A test’s position in a suite, or a suite’s position in a collection. |
+| Millimeter | One thousandth of a meter. |
+| Millisecond | One thousandth of a second. |
 | Loopback address | An address that accepts connections from the same computer. |
 | Metric | A named calculation used to score a recording. |
 | Node.js | The runtime used by the web build tools. |
@@ -31,6 +37,9 @@ Some terms describe the planned review workflow; the README states which behavio
 | Run template | Simulator settings, limits, and accepted scenario type. |
 | Scenario | The initial vehicle state, goal, and obstacle behavior. |
 | Snapshot | An immutable copy of resolved request inputs. |
+| SQLite | The embedded database that stores the local catalog. |
+| Transaction | A group of database changes accepted together or rolled back together. |
+| UTF-8 | The character encoding required for import files. |
 | STE | Simplified Technical English, the writing method defined by ASD-STE100. |
 | Suite | An ordered group of tests. |
 | Synthetic example | An example created without private recordings or customer data. |

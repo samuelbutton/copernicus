@@ -6,13 +6,15 @@ Copernicus is a learning project about choosing driving tests and understanding 
 Imagine checking two braking rules against the same obstacle: one stops the vehicle early, while the other brakes too late.
 The project will help a reviewer compare what happened and trace each result back to the test instructions.
 
-The first version provides command help and a browser introduction to this example.
-It does not create tests, start driving simulations, or load results yet.
+You can import test definitions, organize them into groups, and inspect which tests a collection selects.
+A browser introduction explains the driving example.
+This version does not create requests, start driving simulations, or load results yet.
 
 ## Technical summary
 
 Copernicus separates test selection and review from simulation execution.
-The Go command currently exposes help without file writes or background services.
+The Go command imports validated test catalogs into SQLite and expands collections into ordered, unique tests.
+Help and catalog inspection start no background services.
 The React and TypeScript package builds a static introduction with Vite.
 Both packages build independently and require no other checkout.
 
@@ -27,16 +29,18 @@ Use an ordinary account with write access to the checkout on macOS or Linux.
 The [web manifest](web/package.json) records supported runtime versions and exact direct dependencies.
 The lockfile pins the complete dependency tree.
 
-From the repository root, install the web dependencies:
+From the repository root, install the Go and web dependencies:
 
 ```sh
+go mod download
 cd web
 npm ci --ignore-scripts
 cd ..
 ```
 
 Installation downloads public dependencies into `web/node_modules/` and the npm cache.
-The Go command uses only the standard library and needs no third-party Go modules.
+The Go command uses the pure-Go SQLite driver pinned in [go.mod](go.mod).
+Go downloads its dependencies into the module cache; no C compiler is required.
 Keep installed dependencies for subsequent builds.
 After installation, builds and command help need no internet access.
 
@@ -52,6 +56,12 @@ Help prints the usage and explains the current scope, then returns exit code `0`
 Running the command without arguments, with `help`, or with `-h` prints the same help.
 Unsupported arguments and output failures return exit code `1`.
 Help creates no data directory, database, or service.
+
+## Import test definitions
+
+Follow the [test-model walkthrough](docs/test-model.md#import-and-inspect-the-example) to import the synthetic catalog and expand its collection.
+It includes the empty-lane, stopped-obstacle, and moving-obstacle scenarios, plus baseline and candidate controller references.
+The walkthrough creates a temporary database and includes cleanup commands.
 
 ## Open the browser introduction
 
