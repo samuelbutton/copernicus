@@ -3,9 +3,13 @@ import { Inputs, Load, State } from "./components";
 import { link } from "./navigation";
 export function Execution({ route }: { route: URLSearchParams }) {
   const id = route.get("id") ?? "",
-    execution = route.get("execution") ?? "";
+    execution = route.get("execution") ?? "",
+    analysis = route.get("analysis") || "original";
   const endpoint = `/api/requests/${encodeURIComponent(id)}/executions/${encodeURIComponent(execution)}`;
-  const query = useLive(endpoint, reviewSchema);
+  const query = useLive(
+    `${endpoint}?analysis=${encodeURIComponent(analysis)}`,
+    reviewSchema,
+  );
   const context = Object.fromEntries(route),
     tick = route.get("tick"),
     baseline = route.get("baseline") ?? "",
@@ -15,7 +19,7 @@ export function Execution({ route }: { route: URLSearchParams }) {
       <p className="eyebrow">Request: {id}</p>
       <h1>Inputs and evidence</h1>
       <p className="actions">
-        <a href={link({ view: "request", id })}>Back to request</a>
+        <a href={link({ view: "request", id, analysis })}>Back to request</a>
         {baseline && candidate && (
           <a
             href={link({
@@ -23,6 +27,8 @@ export function Execution({ route }: { route: URLSearchParams }) {
               baseline,
               candidate,
               after: route.get("after") ?? "",
+              baseline_analysis: route.get("baseline_analysis") || "original",
+              candidate_analysis: route.get("candidate_analysis") || "original",
             })}
           >
             Back to comparison
@@ -113,7 +119,14 @@ export function Execution({ route }: { route: URLSearchParams }) {
                 results are imported.
               </p>
             )}
-            {tick !== null && <Evidence endpoint={endpoint} tick={tick} />}
+            {tick !== null && (
+              <Evidence endpoint={endpoint} tick={tick} analysis={analysis} />
+            )}
+            <h2>Selected scores: {data.analysis_selection}</h2>
+            <Inputs
+              name="Selected score limits"
+              value={data.selected_analysis}
+            />
             <h2>Saved inputs</h2>
             <p>
               Seed: {data.execution.seed} · Repeat: {data.execution.repeat}
@@ -122,7 +135,7 @@ export function Execution({ route }: { route: URLSearchParams }) {
             <Inputs name="Braking rule" value={data.controller} />
             <Inputs name="Run settings" value={data.execution.run_template} />
             <Inputs
-              name="Score limits"
+              name="Original score limits"
               value={data.execution.analysis_template}
             />
             <Inputs name="Test definition" value={data.execution.test} />
@@ -142,9 +155,17 @@ export function Execution({ route }: { route: URLSearchParams }) {
     </>
   );
 }
-function Evidence({ endpoint, tick }: { endpoint: string; tick: string }) {
+function Evidence({
+  endpoint,
+  tick,
+  analysis,
+}: {
+  endpoint: string;
+  tick: string;
+  analysis: string;
+}) {
   const query = useLive(
-    `${endpoint}/ticks/${encodeURIComponent(tick)}`,
+    `${endpoint}/ticks/${encodeURIComponent(tick)}?analysis=${encodeURIComponent(analysis)}`,
     tickSchema,
   );
   return (

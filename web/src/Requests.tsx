@@ -1,6 +1,7 @@
 import { progressSchema, useLive, useRequests } from "./api";
 import { Load, State, Totals } from "./components";
-import { link } from "./navigation";
+import { AnalysisChoice, NewAnalysis } from "./Analysis";
+import { link, navigate } from "./navigation";
 
 export function Requests() {
   const query = useRequests();
@@ -46,15 +47,28 @@ export function Requests() {
     </>
   );
 }
-export function RequestView({ id }: { id: string }) {
+export function RequestView({
+  id,
+  analysis,
+}: {
+  id: string;
+  analysis: string;
+}) {
   const query = useLive(
-    `/api/requests/${encodeURIComponent(id)}/status`,
+    `/api/requests/${encodeURIComponent(id)}/status?analysis=${encodeURIComponent(analysis)}`,
     progressSchema,
   );
   return (
     <>
       <p className="eyebrow">Saved request</p>
       <h1>{id}</h1>
+      <AnalysisChoice
+        requestID={id}
+        label="Scores to review"
+        value={analysis}
+        onChange={(value) => navigate({ view: "request", id, analysis: value })}
+      />
+      <NewAnalysis requestID={id} />
       <Load query={query} name="progress">
         {(data) => (
           <>
@@ -62,7 +76,11 @@ export function RequestView({ id }: { id: string }) {
             <p className="actions">
               <a
                 className="primary"
-                href={link({ view: "compare", baseline: id })}
+                href={link({
+                  view: "compare",
+                  baseline: id,
+                  baseline_analysis: analysis,
+                })}
               >
                 Compare this request
               </a>
@@ -116,6 +134,7 @@ export function RequestView({ id }: { id: string }) {
                             view: "execution",
                             id,
                             execution: item.execution_id,
+                            analysis,
                           })}
                         >
                           Inputs and evidence for {item.test_id}

@@ -55,7 +55,7 @@ export function State({ value }: { value: string }) {
 export function Totals({
   data,
 }: {
-  data: Omit<Progress, "executions" | "request_id">;
+  data: Omit<Progress, "executions" | "request_id" | "analysis_selection">;
 }) {
   return (
     <div className="totals">

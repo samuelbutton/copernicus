@@ -12,6 +12,7 @@ const frozen = z.object({
   content: z.record(z.string(), z.json()),
 });
 export const catalogSchema = z.object({
+  analysis_templates: z.array(z.object({ id })),
   controllers: z.array(z.object({ id, name: id, version: count })),
   suites: z.array(z.object({ id, test_ids: z.array(id) })),
   collections: z.array(z.object({ id, suite_ids: z.array(id) })),
@@ -52,11 +53,15 @@ const totals = z.object({
   resolution_failed: count,
   complete: z.boolean(),
 });
+export const analysisSchema = z.object({ id, template: frozen.nullable() });
+export const analysesSchema = z.array(analysisSchema);
 export const progressSchema = totals.extend({
+  analysis_selection: id,
   request_id: id,
   executions: z.array(executionProgress),
 });
 const selection = totals.extend({
+  analysis_selection: id,
   request_id: id,
   snapshot_sha256: hash,
   controller_sha256: hash,
@@ -116,6 +121,8 @@ export const comparisonSchema = z.object({
   next_after: hash.optional(),
 });
 export const reviewSchema = z.object({
+  analysis_selection: id,
+  selected_analysis: frozen,
   request_id: id,
   snapshot_sha256: hash,
   controller: frozen,
@@ -191,7 +198,9 @@ export async function fetchJSON<T>(
   });
   if (!response.ok) {
     const messages: Record<number, string> = {
-      400: "Check your request name and selected suites. Reload the catalog if its tests changed.",
+      400: path.endsWith("/analyses")
+        ? "New scores need supported scoring settings and an original recording for every test. Import missing results, then retry."
+        : "Check your request name and selected suites. Reload the catalog if its tests changed.",
       403: "Access was denied. Open the review server at its printed local address.",
       404: "This item is unavailable. Return to the request list or retry after importing results.",
       409: "This request name already has different inputs. Choose a new name, or open the saved request.",

@@ -68,6 +68,22 @@ func TestReviewServerCreationBoundary(t *testing.T) {
 			t.Fatalf("create: %d %s", r.Code, r.Body.String())
 		}
 	}
+	for _, bad := range []string{`{}`, `{"template_id":"standard-v1","template_id":"edge-v2"}`, `{"TEMPLATE_ID":"standard-v1"}`, `{"template_id":"standard-v1","extra":1}`, `null`, strings.Repeat(" ", 1025)} {
+		if r := call("POST", "/api/requests/browser-one/analyses", bad, "http://127.0.0.1:8080", "application/json", "1"); r.Code != 400 {
+			t.Fatal("invalid analysis body", r.Code)
+		}
+	}
+	for _, origin := range []string{"", "null", "https://remote.invalid"} {
+		if r := call("POST", "/api/requests/browser-one/analyses", `{"template_id":"standard-v1"}`, origin, "application/json", "1"); r.Code != 403 {
+			t.Fatal("analysis write bypassed origin", r.Code)
+		}
+	}
+	if r := call("POST", "/api/requests/browser-one/analyses", `{"template_id":"standard-v1"}`, "http://127.0.0.1:8080", "application/json", ""); r.Code != 403 {
+		t.Fatal("analysis write bypassed request header")
+	}
+	if r := call("POST", "/api/requests/browser-one/analyses", `{"template_id":"standard-v1"}`, "http://127.0.0.1:8080", "application/json", "1"); r.Code != 400 {
+		t.Fatal("analysis accepted missing recordings")
+	}
 	changed := strings.Replace(body, `"baseline"`, `"candidate"`, 1)
 	if r := call("POST", "/api/requests", changed, "http://127.0.0.1:8080", "application/json", "1"); r.Code != 409 {
 		t.Fatal("identity conflict not reported")

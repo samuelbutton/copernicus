@@ -13,16 +13,21 @@ import (
 // Review joins one frozen execution to freshly validated outcome evidence.
 // It accepts identifiers, never caller-supplied filesystem paths.
 type Review struct {
-	RequestID    string                `json:"request_id"`
-	SnapshotHash string                `json:"snapshot_sha256"`
-	Controller   request.Frozen        `json:"controller"`
-	Source       request.Frozen        `json:"source"`
-	Execution    request.Execution     `json:"execution"`
-	Progress     ExecutionProgress     `json:"progress"`
-	Outcome      *compatibility.Result `json:"outcome"`
+	AnalysisSelection string                `json:"analysis_selection"`
+	SelectedAnalysis  request.Frozen        `json:"selected_analysis"`
+	RequestID         string                `json:"request_id"`
+	SnapshotHash      string                `json:"snapshot_sha256"`
+	Controller        request.Frozen        `json:"controller"`
+	Source            request.Frozen        `json:"source"`
+	Execution         request.Execution     `json:"execution"`
+	Progress          ExecutionProgress     `json:"progress"`
+	Outcome           *compatibility.Result `json:"outcome"`
 }
 
 func (s *Store) Review(ctx context.Context, id, executionID string) (Review, error) {
+	return s.ReviewAnalysis(ctx, id, executionID, OriginalAnalysis)
+}
+func (s *Store) ReviewAnalysis(ctx context.Context, id, executionID, analysis string) (Review, error) {
 	var out Review
 	record, err := s.Request(ctx, id)
 	if err != nil {
@@ -44,7 +49,7 @@ func (s *Store) Review(ctx context.Context, id, executionID string) (Review, err
 		return out, sql.ErrNoRows
 	}
 	out.RequestID, out.SnapshotHash, out.Controller, out.Source = id, record.SnapshotSHA256, snapshot.Controller, snapshot.Source
-	progress, err := s.progress(ctx, id, func(file exchange.ResultFile) error {
+	progress, err := s.progressAnalysis(ctx, id, analysis, func(file exchange.ResultFile) error {
 		if file.Result.ExecutionID == executionID {
 			result := file.Result
 			out.Outcome = &result
@@ -53,6 +58,11 @@ func (s *Store) Review(ctx context.Context, id, executionID string) (Review, err
 	})
 	if err != nil {
 		return Review{}, err
+	}
+	out.AnalysisSelection = analysis
+	out.SelectedAnalysis = out.Execution.AnalysisTemplate
+	if progress.SelectedTemplate != nil {
+		out.SelectedAnalysis = *progress.SelectedTemplate
 	}
 	for _, execution := range progress.Executions {
 		if execution.ExecutionID == executionID {
@@ -65,7 +75,10 @@ func (s *Store) Review(ctx context.Context, id, executionID string) (Review, err
 
 // Evidence returns only a tick cited by the currently validated selected result.
 func (s *Store) Evidence(ctx context.Context, id, executionID string, tick int) (json.RawMessage, error) {
-	review, err := s.Review(ctx, id, executionID)
+	return s.EvidenceAnalysis(ctx, id, executionID, OriginalAnalysis, tick)
+}
+func (s *Store) EvidenceAnalysis(ctx context.Context, id, executionID, analysis string, tick int) (json.RawMessage, error) {
+	review, err := s.ReviewAnalysis(ctx, id, executionID, analysis)
 	if err != nil {
 		return nil, err
 	}

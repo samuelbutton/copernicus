@@ -7,6 +7,7 @@ Some terms describe the planned review workflow; the README states which behavio
 | --- | --- |
 | Acknowledgement | A saved confirmation that a complete job file was published durably. |
 | Analysis | One scoring operation on a recording with a complete metric configuration. |
+| Analysis selection | A saved scoring configuration and its exact job for every test in a request. |
 | Analysis template | Metric names, versions, and settings used to score a recording. |
 | Atomic rename | A filesystem operation that makes a complete file visible under its final name at once. |
 | Bag | A saved sequence of simulation records. |

@@ -2,7 +2,8 @@
 
 A published result says what happened during one identified execution.
 Copernicus checks its supporting files before adding it to the local result index.
-Request progress counts validated outcomes against the original selection.
+Request progress counts validated outcomes against every frozen test.
+It defaults to original scores; an explicit analysis selection reads that saved set.
 Missing files and unresolved tests cannot become passing results.
 
 ## Read the published contract examples
@@ -253,3 +254,17 @@ make clean
 The server drains active requests before closing its database.
 Cleanup removes the temporary request, outbox, exchange, logs, and generated builds.
 Source files, installed dependencies, and unrelated databases remain available.
+
+## Select another analysis
+
+Use `analysis=ID` on request status, execution review, and cited-tick GET routes.
+Omitting this query selects `original`; unknown IDs return `404`.
+`GET /api/requests/{id}/analyses` lists the original selection and saved templates.
+In review-server mode, `POST /api/requests/{id}/analyses` accepts exactly `{"template_id":"edge-v2"}`.
+It requires the same origin, JSON content type, and custom request header as request creation.
+The default read-only server rejects this write.
+
+[Schema five](../internal/store/analysis-v5.sql) adds immutable analysis selections and permits separate analysis jobs for existing executions.
+Original results retain their exact job mapping.
+Index rebuild preserves all accepted analyses; selected progress never substitutes another result.
+The [reanalysis guide](reanalysis.md) provides the complete procedure and cleanup.

@@ -257,8 +257,8 @@ legend {
   max-width: none;
   align-items: end;
 }
-.compare-form label {
-  flex: 1 1 16rem;
+.compare-form > fieldset {
+  flex: 1 1 20rem;
 }
 .notice {
   background: var(--soft);

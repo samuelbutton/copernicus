@@ -23,7 +23,7 @@ type App = {
   directory: string;
   db: string;
   exchange: string;
-  processJobs: () => Promise<void>;
+  processJobs: (analysisOnly?: boolean) => Promise<void>;
 };
 const test = base.extend<{ app: App }>({
   app: async ({ request }, provide) => {
@@ -84,7 +84,7 @@ const test = base.extend<{ app: App }>({
         directory,
         db,
         exchange,
-        processJobs: async () => {
+        processJobs: async (analysisOnly = false) => {
           const engine = process.env["YAMATA_BIN"];
           if (!engine)
             throw new Error(
@@ -105,7 +105,15 @@ const test = base.extend<{ app: App }>({
               exchange,
               `jobs/${job}`,
             ]);
-          await run(engine, ["workers", "--exchange-dir", exchange, "--drain"]);
+          await run(engine, [
+            "workers",
+            "--exchange-dir",
+            exchange,
+            "--drain",
+            ...(analysisOnly
+              ? ["--simulation-workers", "0", "--analysis-workers", "1"]
+              : []),
+          ]);
           await run(cli, [
             "results",
             "import",
@@ -337,5 +345,243 @@ test("real baseline to candidate review and cited recording evidence", async ({
   ).toBeVisible();
   await expect(
     page.getByText("0 metric regressions", { exact: true }),
+  ).toBeVisible();
+});
+
+async function savedArtifacts(exchange: string) {
+  const files = new Map<string, Buffer>();
+  for (const directory of ["bags", "results", "events"])
+    for (const name of await readdir(join(exchange, directory))) {
+      const path = `${directory}/${name}`;
+      files.set(path, await readFile(join(exchange, path)));
+    }
+  return files;
+}
+async function newScores(page: Page, app: App, id: string) {
+  await page.goto(`${app.url}#view=request&id=${id}`);
+  if (!(await page.getByLabel("New scoring settings").isVisible()))
+    await page
+      .getByText("Score these recordings again", { exact: true })
+      .click();
+  await page.getByLabel("New scoring settings").selectOption("edge-v2");
+  await page
+    .getByRole("button", { name: "Request new scores", exact: true })
+    .click();
+  await expect(page.getByLabel("Scores to review")).toHaveValue("edge-v2");
+}
+
+test("new scoring versions preserve recordings and restore explicit comparisons", async ({
+  page,
+  app,
+}, testInfo) => {
+  test.setTimeout(120000);
+  await run(cli, [
+    "catalog",
+    "import",
+    "--db",
+    app.db,
+    "--file",
+    join(root, "examples/reanalysis-catalog.json"),
+  ]);
+  await page.goto(app.url);
+  await create(page, "scores-baseline", "baseline", ["smoke", "obstacles"]);
+  await create(page, "scores-candidate", "candidate", ["smoke", "obstacles"]);
+  // Incomplete requests cannot silently omit tests from a scoring selection.
+  await page.getByText("Score these recordings again", { exact: true }).click();
+  await page.getByLabel("New scoring settings").selectOption("edge-v2");
+  await page
+    .getByRole("button", { name: "Request new scores", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "original recording for every test",
+  );
+  await app.processJobs();
+  const engine = process.env["YAMATA_BIN"];
+  if (!engine) throw new Error("Expected the pinned engine");
+  const queueSchema = z.object({
+    dispatch_positions: z.object({ simulation: z.number() }),
+    jobs: z.array(
+      z.object({ job_kind: z.string(), simulation_retries: z.number() }),
+    ),
+  });
+  const queueBefore = queueSchema.parse(
+    JSON.parse(
+      (await run(engine, ["queue", "--exchange-dir", app.exchange])).stdout,
+    ) as unknown,
+  );
+  const before = await savedArtifacts(app.exchange);
+  const original = await run(cli, [
+    "request",
+    "status",
+    "--db",
+    app.db,
+    "--id",
+    "scores-candidate",
+  ]);
+  await newScores(page, app, "scores-candidate");
+  await expect(page.getByText("0 of 3", { exact: true })).toBeVisible();
+  await app.processJobs(true);
+  await expect(page.getByText("3 of 3", { exact: true })).toBeVisible();
+  await page.getByLabel("Scores to review").selectOption("original");
+  await expect(page.getByText("3 of 3", { exact: true })).toBeVisible();
+  await page.goto(
+    `${app.url}#view=compare&baseline=scores-baseline&candidate=scores-candidate&baseline_analysis=original&candidate_analysis=edge-v2`,
+  );
+  await expect(
+    page.getByText(/3 total groups: 0 compared, 0 incomplete, 3 incompatible/),
+  ).toBeVisible();
+  await expect(page.getByLabel("Baseline scores")).toHaveValue("original");
+  await expect(page.getByLabel("Candidate scores")).toHaveValue("edge-v2");
+  await accessible(page);
+  await newScores(page, app, "scores-baseline");
+  await app.processJobs(true);
+  await page.goto(
+    `${app.url}#view=compare&baseline=scores-baseline&candidate=scores-candidate&baseline_analysis=edge-v2&candidate_analysis=edge-v2`,
+  );
+  await expect(page.getByText(/3 total groups: 3 compared/)).toBeVisible();
+  await accessible(page);
+  await page.screenshot({
+    path: testInfo.outputPath("matched-scores.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("link", { name: "Candidate: stopped-obstacle", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Selected scores: edge-v2" }),
+  ).toBeVisible();
+  const gap = page.getByRole("row").filter({
+    has: page.getByRole("rowheader", { name: /minimum obstacle gap/ }),
+  });
+  await expect(gap).toContainText("Version 2");
+  await expect(
+    gap.getByRole("cell", { name: "0 mm", exact: true }),
+  ).toBeVisible();
+  const collision = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: /collision count/ }) });
+  await collision.getByRole("link", { name: "Tick 22", exact: true }).click();
+  await expect(
+    page.getByText("Time in recording: 2200 milliseconds."),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Selected scores: edge-v2" }),
+  ).toBeVisible();
+  await accessible(page);
+  await page.getByRole("link", { name: "Back to comparison" }).click();
+  await expect(page.getByLabel("Baseline scores")).toHaveValue("edge-v2");
+  await expect(page.getByLabel("Candidate scores")).toHaveValue("edge-v2");
+  await page.getByLabel("Baseline scores").selectOption("original");
+  await page.getByLabel("Candidate scores").selectOption("original");
+  await page.getByRole("button", { name: "Compare requests" }).click();
+  await expect(page.getByText(/3 total groups: 3 compared/)).toBeVisible();
+  await page
+    .getByRole("link", { name: "Candidate: stopped-obstacle", exact: true })
+    .click();
+  await expect(gap).toContainText("Version 1");
+  await expect(gap).toContainText("3400 mm");
+  // Same request on both sides must still respect distinct scoring selections.
+  await page.goto(
+    `${app.url}#view=compare&baseline=scores-candidate&candidate=scores-candidate&baseline_analysis=original&candidate_analysis=edge-v2`,
+  );
+  await expect(
+    page.getByText(/3 total groups: 0 compared, 0 incomplete, 3 incompatible/),
+  ).toBeVisible();
+  const after = await savedArtifacts(app.exchange);
+  const queueAfter = queueSchema.parse(
+    JSON.parse(
+      (await run(engine, ["queue", "--exchange-dir", app.exchange])).stdout,
+    ) as unknown,
+  );
+  expect(queueBefore.dispatch_positions.simulation).toBe(6);
+  expect(queueAfter.dispatch_positions.simulation).toBe(6);
+  expect(
+    queueAfter.jobs.filter((job) => job.job_kind === "analysis"),
+  ).toHaveLength(6);
+  expect(queueAfter.jobs.every((job) => job.simulation_retries === 0)).toBe(
+    true,
+  );
+
+  for (const [path, bytes] of before)
+    expect(after.get(path), path).toEqual(bytes);
+  const recordingCount = (files: Map<string, Buffer>) =>
+    [...files.keys()].filter((path) => path.startsWith("bags/")).length;
+  expect(recordingCount(before)).toBe(6);
+  expect(recordingCount(after)).toBe(6);
+  const events = z.object({ state: z.string() });
+  const simulations = (files: Map<string, Buffer>) =>
+    [...files].filter(
+      ([path, bytes]) =>
+        path.startsWith("events/") &&
+        events.parse(JSON.parse(bytes.toString()) as unknown).state ===
+          "RUNNING",
+    ).length;
+  expect(simulations(before)).toBe(6);
+  expect(simulations(after)).toBe(6);
+  const outcome = z.object({
+    execution_id: z.string(),
+    analysis_id: z.string(),
+    bag: z.object({ path: z.string(), sha256: z.string() }),
+    metrics: z.object({
+      minimum_obstacle_gap: z.object({ version: z.number() }),
+    }),
+  });
+  const results = [...after]
+    .filter(([path]) => path.startsWith("results/"))
+    .map(([, bytes]) => outcome.parse(JSON.parse(bytes.toString()) as unknown));
+  expect(results).toHaveLength(12);
+  for (const first of results.filter(
+    (r) => r.metrics.minimum_obstacle_gap.version === 1,
+  )) {
+    const second = results.find(
+      (r) =>
+        r.execution_id === first.execution_id &&
+        r.metrics.minimum_obstacle_gap.version === 2,
+    );
+    expect(second?.analysis_id).not.toBe(first.analysis_id);
+    expect(second?.bag).toEqual(first.bag);
+  }
+  const current = await run(cli, [
+    "request",
+    "status",
+    "--db",
+    app.db,
+    "--id",
+    "scores-candidate",
+  ]);
+  expect(current.stdout).toBe(original.stdout);
+  // Retrying accepted work and rebuilding the derived index preserve both selections.
+  await newScores(page, app, "scores-candidate");
+  await app.processJobs(true);
+  expect(await savedArtifacts(app.exchange)).toEqual(after);
+  await run(cli, [
+    "results",
+    "rebuild",
+    "--db",
+    app.db,
+    "--exchange-dir",
+    app.exchange,
+  ]);
+  await page.reload();
+  await expect(page.getByText("3 of 3", { exact: true })).toBeVisible();
+  const originalAfterRebuild = await run(cli, [
+    "request",
+    "status",
+    "--db",
+    app.db,
+    "--id",
+    "scores-candidate",
+  ]);
+  expect(originalAfterRebuild.stdout).toBe(original.stdout);
+  // Missing recordings never fall back to old scores or trigger simulation.
+  const bag = results[0]?.bag.path;
+  if (!bag) throw new Error("Expected a recording");
+  await rename(join(app.exchange, bag), join(app.directory, "removed-bag"));
+  await page.goto(
+    `${app.url}#view=compare&baseline=scores-baseline&candidate=scores-candidate&baseline_analysis=edge-v2&candidate_analysis=edge-v2`,
+  );
+  await expect(
+    page.getByText(/3 total groups: 2 compared, 1 incomplete/),
   ).toBeVisible();
 });

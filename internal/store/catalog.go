@@ -95,7 +95,7 @@ func (s *Store) initialize(ctx context.Context, create bool) error {
 	if err := tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		return fmt.Errorf("read catalog version: %w", err)
 	}
-	if app == applicationID && (version >= 1 && version <= 4) {
+	if app == applicationID && (version >= 1 && version <= 5) {
 		if create && version == 1 {
 			if _, err := tx.ExecContext(ctx, requestsSchema); err != nil {
 				return fmt.Errorf("upgrade request schema: %w", err)
@@ -111,6 +111,11 @@ func (s *Store) initialize(ctx context.Context, create bool) error {
 				return fmt.Errorf("upgrade result schema: %w", err)
 			}
 		}
+		if create && version < 5 {
+			if _, err := tx.ExecContext(ctx, analysisSchema); err != nil {
+				return fmt.Errorf("upgrade analysis selections: %w", err)
+			}
+		}
 		return tx.Commit()
 	}
 	if !create || app != 0 || version != 0 {
@@ -123,7 +128,7 @@ func (s *Store) initialize(ctx context.Context, create bool) error {
 	if count != 0 {
 		return errors.New("refusing to initialize a nonempty database")
 	}
-	if _, err := tx.ExecContext(ctx, schema+"\n"+requestsSchema+"\n"+outboxSchema+"\n"+resultsSchema); err != nil {
+	if _, err := tx.ExecContext(ctx, schema+"\n"+requestsSchema+"\n"+outboxSchema+"\n"+resultsSchema+"\n"+analysisSchema); err != nil {
 		return fmt.Errorf("create catalog schema: %w", err)
 	}
 	if err := tx.Commit(); err != nil {

@@ -40,19 +40,20 @@ type Entry struct {
 }
 
 type Selection struct {
-	RequestID        string          `json:"request_id"`
-	SnapshotHash     string          `json:"snapshot_sha256"`
-	ControllerHash   string          `json:"controller_sha256"`
-	Total            int             `json:"total"`
-	Completed        int             `json:"completed"`
-	Incomplete       int             `json:"incomplete"`
-	Passed           int             `json:"passed"`
-	Failed           int             `json:"failed"`
-	Warnings         int             `json:"warnings"`
-	Errors           int             `json:"errors"`
-	ResolutionFailed int             `json:"resolution_failed"`
-	Complete         bool            `json:"complete"`
-	Entries          map[Key][]Entry `json:"-"`
+	AnalysisSelection string          `json:"analysis_selection"`
+	RequestID         string          `json:"request_id"`
+	SnapshotHash      string          `json:"snapshot_sha256"`
+	ControllerHash    string          `json:"controller_sha256"`
+	Total             int             `json:"total"`
+	Completed         int             `json:"completed"`
+	Incomplete        int             `json:"incomplete"`
+	Passed            int             `json:"passed"`
+	Failed            int             `json:"failed"`
+	Warnings          int             `json:"warnings"`
+	Errors            int             `json:"errors"`
+	ResolutionFailed  int             `json:"resolution_failed"`
+	Complete          bool            `json:"complete"`
+	Entries           map[Key][]Entry `json:"-"`
 }
 
 type Metric struct {

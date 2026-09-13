@@ -16,6 +16,8 @@ func runCompare(ctx context.Context, args []string, output io.Writer) (err error
 	dbPath := flags.String("db", "", "database path")
 	baseline := flags.String("baseline", "", "baseline request")
 	candidate := flags.String("candidate", "", "candidate request")
+	baselineAnalysis := flags.String("baseline-analysis", store.OriginalAnalysis, "baseline scoring selection")
+	candidateAnalysis := flags.String("candidate-analysis", store.OriginalAnalysis, "candidate scoring selection")
 	duckdb := flags.String("duckdb", "bin/duckdb", "DuckDB executable")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -32,7 +34,7 @@ func runCompare(ctx context.Context, args []string, output io.Writer) (err error
 		return err
 	}
 	defer func() { err = errors.Join(err, db.Close()) }()
-	result, err := db.Compare(ctx, *baseline, *candidate, *duckdb)
+	result, err := db.CompareAnalyses(ctx, *baseline, *candidate, *baselineAnalysis, *candidateAnalysis, *duckdb)
 	if err != nil {
 		return err
 	}

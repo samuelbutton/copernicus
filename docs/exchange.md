@@ -200,7 +200,7 @@ Published jobs count toward those limits because their original bytes remain sto
 Exceeding a storage limit rolls back the request that would exceed it.
 
 The outbox migration upgrades database versions `1` and `2` to version `3`.
-Current write commands also apply [schema four](lifecycle.md#storage-and-recovery), which adds result imports.
+Write commands apply [schema four](lifecycle.md#storage-and-recovery) for result imports and [schema five](reanalysis.md#selection-and-recovery-rules) for saved analyses.
 Stop older commands and back up the database before upgrading.
 
 The migration queues compatible executions from existing snapshots without consulting edited catalog definitions.
@@ -224,3 +224,11 @@ Remove only the temporary directory created by this walkthrough.
 This removes its catalog, outbox, job copies, and any optional execution output.
 `make clean` removes generated builds while preserving other databases and exchanges.
 Source files and installed dependencies remain available.
+
+## Publish new scoring jobs
+
+[Reanalysis](reanalysis.md) saves analysis jobs in this same outbox after validating every original recording.
+Publication retains the same destination, byte checks, and recovery rules.
+Each analysis job supplies a pinned bag reference and complete scoring template.
+Equivalent scoring content reuses the original job or an existing analysis job.
+The publisher does not launch simulation or analysis workers.

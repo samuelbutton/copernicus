@@ -27,7 +27,11 @@ Usage:
   copernicus results import --db PATH --exchange-dir PATH [events/FILE.json results/FILE.json ...]
   copernicus results rebuild --db PATH --exchange-dir PATH
   copernicus results show --db PATH [--after CURSOR] [--limit 1..100]
+  copernicus analysis create --db PATH --request ID --template ID
+  copernicus analysis list --db PATH --request ID
+  copernicus analysis status --db PATH --request ID [--analysis ID]
   copernicus compare --db PATH --baseline ID --candidate ID [--duckdb PATH]
+                     [--baseline-analysis ID] [--candidate-analysis ID]
   copernicus serve --db PATH [--port PORT] [--duckdb PATH] [--web-dir PATH]
   copernicus outbox show --db PATH
   copernicus outbox publish --db PATH --exchange-dir PATH [--limit 1..1000]
@@ -41,7 +45,7 @@ Publication does not start workers or import results.
 Result import validates public files and records repeat-safe progress.
 Compare reads selected outcomes through DuckDB; its default path is bin/duckdb.
 Serve exposes a read-only HTTP API on 127.0.0.1.
-Adding --web-dir web/dist serves the review interface and enables request creation.
+Adding --web-dir web/dist serves the review interface and enables request and analysis creation.
 See docs/lifecycle.md for completion checks and index recovery.
 `
 
@@ -69,11 +73,14 @@ func run(ctx context.Context, args []string, output io.Writer) error {
 		defer cancel()
 		return runCompare(ctx, args[1:], output)
 	}
-	if len(args) < 2 || (args[0] != "catalog" && args[0] != "request" && args[0] != "outbox" && args[0] != "results") {
+	if len(args) < 2 || (args[0] != "catalog" && args[0] != "request" && args[0] != "outbox" && args[0] != "results" && args[0] != "analysis") {
 		return errors.New("unsupported arguments; use copernicus --help")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	if args[0] == "analysis" {
+		return runAnalysis(ctx, args[1:], output)
+	}
 	if args[0] == "results" {
 		return runResults(ctx, args[1:], output)
 	}

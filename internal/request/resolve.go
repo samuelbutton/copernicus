@@ -147,10 +147,10 @@ func CompatibilityFailure(s catalog.Scenario, r catalog.RunTemplate, a catalog.A
 	if (c.Name != "baseline" && c.Name != "candidate") || c.Version != 1 {
 		return "UNSUPPORTED_CONTROLLER"
 	}
-	if a.CollisionCount.Version != 1 || (a.MinimumObstacleGap.Version != 1 && a.MinimumObstacleGap.Version != 2) || a.GoalProgress.Version != 1 {
-		return "UNSUPPORTED_METRIC_VERSION"
+	if reason := AnalysisCompatibilityFailure(a); reason != "" {
+		return reason
 	}
-	if a.CollisionCount.Maximum != 0 || r.TickMS > 1000 || r.MaxTicks > 100000 || r.TimeoutMS > 600000 || a.MinimumObstacleGap.MinimumMM > 1000000000 {
+	if r.TickMS > 1000 || r.MaxTicks > 100000 || r.TimeoutMS > 600000 {
 		return "UNSUPPORTED_LIMITS"
 	}
 	if s.GoalPositionMM > 1000000000 || len(s.Obstacles) > 32 {
@@ -172,4 +172,16 @@ func bodySupported(position, speed, length int64, r catalog.RunTemplate) bool {
 	}
 	// Bounds are checked before multiplication, so the coast calculation fits int64.
 	return position+speed*r.TickMS*r.MaxTicks/1000 <= 1000000000
+}
+
+// AnalysisCompatibilityFailure shares pinned scoring support across runs and reanalysis.
+// Catalog validation separately checks nonnegative values and required versions.
+func AnalysisCompatibilityFailure(a catalog.AnalysisTemplate) string {
+	if a.CollisionCount.Version != 1 || (a.MinimumObstacleGap.Version != 1 && a.MinimumObstacleGap.Version != 2) || a.GoalProgress.Version != 1 {
+		return "UNSUPPORTED_METRIC_VERSION"
+	}
+	if a.CollisionCount.Maximum != 0 || a.MinimumObstacleGap.MinimumMM > 1000000000 {
+		return "UNSUPPORTED_LIMITS"
+	}
+	return ""
 }

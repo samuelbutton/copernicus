@@ -13,7 +13,15 @@ export function App() {
   useEffect(() => {
     main.current?.focus();
   }, [routeKey]);
-  const invalid = ["id", "execution", "baseline", "candidate"].some((key) => {
+  const invalid = [
+    "id",
+    "execution",
+    "baseline",
+    "candidate",
+    "analysis",
+    "baseline_analysis",
+    "candidate_analysis",
+  ].some((key) => {
     const value = route.get(key);
     return value !== null && value !== "" && !id.safeParse(value).success;
   });
@@ -65,13 +73,19 @@ export function App() {
         ) : view === "create" ? (
           <CreateRequest />
         ) : view === "request" ? (
-          <RequestView key={routeKey} id={route.get("id") ?? ""} />
+          <RequestView
+            key={routeKey}
+            id={route.get("id") ?? ""}
+            analysis={route.get("analysis") || "original"}
+          />
         ) : view === "compare" ? (
           <Comparison
             key={routeKey}
             baseline={route.get("baseline") ?? ""}
             candidate={route.get("candidate") ?? ""}
             after={route.get("after") ?? ""}
+            baselineAnalysis={route.get("baseline_analysis") || "original"}
+            candidateAnalysis={route.get("candidate_analysis") || "original"}
           />
         ) : view === "execution" ? (
           <Execution route={route} />

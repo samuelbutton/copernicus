@@ -15,6 +15,7 @@ Delivery can resume after an interruption.
 You can load published results and check how many tests have finished.
 Missing files remain incomplete, and failed tests stay visible.
 You can compare two saved requests to see which measurements improved or became worse.
+You can score saved recordings again, preserve the original results, and choose which scores to compare.
 
 ## Technical summary
 
@@ -33,7 +34,7 @@ Publication does not start workers or import results.
 
 The result importer validates published files and maps exact accepted jobs back to requests.
 A local HTTP API exposes snapshots, progress, evidence, and the result index.
-Review-server mode also accepts repeat-safe request creation.
+Review-server mode also accepts repeat-safe request and analysis creation.
 DuckDB queries selected result files for compatible comparisons, with explicit missing and unmatched rows.
 
 ## Build and read the command help
@@ -105,6 +106,11 @@ Follow the [review guide](docs/review-guide.md) to create both requests in the b
 The guide includes server setup, worker commands, evidence inspection, keyboard controls, verification, and cleanup.
 Use `serve --web-dir web/dist` to serve the built interface and its API from one local address.
 `make preview` serves static assets only; review actions require the Go review server.
+
+## Score saved recordings again
+
+Follow the [reanalysis guide](docs/reanalysis.md) to request new scores and select a scoring configuration for each comparison side.
+It verifies unchanged recordings, preserved original results, and restored comparison after matching metric versions.
 
 ## Verify and clean up
 

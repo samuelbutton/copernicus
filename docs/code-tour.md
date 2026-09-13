@@ -83,3 +83,15 @@ The [comparison tests](../internal/comparison/comparison_test.go) cover equal va
 | [web/src/Comparison.tsx](../web/src/Comparison.tsx) | Presents both selections, metric deltas, and paged evidence links. |
 | [web/src/Execution.tsx](../web/src/Execution.tsx) | Displays immutable inputs and validated recording evidence. |
 | [web/e2e/review.spec.ts](../web/e2e/review.spec.ts) | Exercises the browser against temporary databases and the public engine CLI. |
+
+| Reanalysis path | Responsibility |
+| --- | --- |
+| [internal/adapter/analysis.go](../internal/adapter/analysis.go) | Creates public analysis jobs for pinned recordings and scoring configurations. |
+| [internal/store/analysis.go](../internal/store/analysis.go) | Saves complete immutable selections, reuses equivalent jobs, and rejects missing original recordings. |
+| [internal/store/analysis-v5.sql](../internal/store/analysis-v5.sql) | Preserves original jobs and adds separate saved scoring selections. |
+| [internal/httpapi/analysis.go](../internal/httpapi/analysis.go) | Validates selected-analysis queries and same-origin analysis submissions. |
+| [cmd/copernicus/analysis.go](../cmd/copernicus/analysis.go) | Creates, lists, and reads progress for scoring selections. |
+| [web/src/Analysis.tsx](../web/src/Analysis.tsx) | Offers explicit scoring choices and requests new scores. |
+| [examples/reanalysis-catalog.json](../examples/reanalysis-catalog.json) | Supplies body-edge gap scoring without changing original definitions. |
+
+The [reanalysis guide](reanalysis.md) verifies preserved recordings and original results through the public execution boundary.

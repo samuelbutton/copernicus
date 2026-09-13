@@ -25,17 +25,19 @@ type ExecutionProgress struct {
 	Result      *ResultReference `json:"result,omitempty"`
 }
 type RequestProgress struct {
-	RequestID        string              `json:"request_id"`
-	Total            int                 `json:"total"`
-	Completed        int                 `json:"completed"`
-	Incomplete       int                 `json:"incomplete"`
-	Passed           int                 `json:"passed"`
-	Failed           int                 `json:"failed"`
-	Warnings         int                 `json:"warnings"`
-	Errors           int                 `json:"errors"`
-	ResolutionFailed int                 `json:"resolution_failed"`
-	Complete         bool                `json:"complete"`
-	Executions       []ExecutionProgress `json:"executions"`
+	AnalysisSelection string              `json:"analysis_selection"`
+	SelectedTemplate  *request.Frozen     `json:"selected_template,omitempty"`
+	RequestID         string              `json:"request_id"`
+	Total             int                 `json:"total"`
+	Completed         int                 `json:"completed"`
+	Incomplete        int                 `json:"incomplete"`
+	Passed            int                 `json:"passed"`
+	Failed            int                 `json:"failed"`
+	Warnings          int                 `json:"warnings"`
+	Errors            int                 `json:"errors"`
+	ResolutionFailed  int                 `json:"resolution_failed"`
+	Complete          bool                `json:"complete"`
+	Executions        []ExecutionProgress `json:"executions"`
 }
 
 // Progress reads one consistent database view, then revalidates referenced files
@@ -45,7 +47,13 @@ func (s *Store) Progress(ctx context.Context, id string) (RequestProgress, error
 }
 
 func (s *Store) progress(ctx context.Context, id string, accept func(exchange.ResultFile) error) (RequestProgress, error) {
-	out := RequestProgress{RequestID: id, Executions: []ExecutionProgress{}}
+	return s.progressAnalysis(ctx, id, OriginalAnalysis, accept)
+}
+func (s *Store) ProgressAnalysis(ctx context.Context, id, analysis string) (RequestProgress, error) {
+	return s.progressAnalysis(ctx, id, analysis, nil)
+}
+func (s *Store) progressAnalysis(ctx context.Context, id, analysis string, accept func(exchange.ResultFile) error) (RequestProgress, error) {
+	out := RequestProgress{AnalysisSelection: analysis, RequestID: id, Executions: []ExecutionProgress{}}
 	if err := catalog.ValidateID(id); err != nil {
 		return out, err
 	}
@@ -62,6 +70,14 @@ func (s *Store) progress(ctx context.Context, id string, accept func(exchange.Re
 	if err := json.Unmarshal(record.Snapshot, &snapshot); err != nil {
 		return out, err
 	}
+	selected, err := readAnalysis(ctx, tx, id, analysis)
+	if err != nil {
+		return out, err
+	}
+	if selected.Template != nil && len(selected.Jobs) != len(snapshot.Executions) {
+		return out, errors.New("incomplete analysis selection")
+	}
+	out.SelectedTemplate = selected.Template
 	var source string
 	if err := tx.QueryRowContext(ctx, "SELECT coalesce((SELECT path FROM exchange_destination), '')").Scan(&source); err != nil {
 		return out, err
@@ -75,7 +91,7 @@ func (s *Store) progress(ctx context.Context, id string, accept func(exchange.Re
 			var stage, published int
 			err := tx.QueryRowContext(ctx, `SELECT o.job_id, o.content_hash, o.published,
 			 coalesce((SELECT max(CASE state WHEN 'PENDING' THEN 1 WHEN 'RUNNING' THEN 2 WHEN 'ANALYZING' THEN 3 ELSE 4 END) FROM imported_events WHERE job_id=o.job_id AND execution_id=o.execution_id AND correlation_id=o.request_id),0),
-			 coalesce(r.path,''),coalesce(r.hash,'') FROM outbox o LEFT JOIN indexed_results r ON r.job_id=o.job_id AND r.execution_id=o.execution_id AND r.correlation_id=o.request_id AND r.job_hash=o.content_hash WHERE o.execution_id=?`, e.ID).Scan(&p.JobID, &file.hash, &published, &stage, &file.path, &file.fileHash)
+			 coalesce(r.path,''),coalesce(r.hash,'') FROM outbox o LEFT JOIN indexed_results r ON r.job_id=o.job_id AND r.execution_id=o.execution_id AND r.correlation_id=o.request_id AND r.job_hash=o.content_hash WHERE o.execution_id=? AND ((?='original' AND json_extract(o.content,'$.job_kind')='run') OR (?!='original' AND o.job_id=?))`, e.ID, analysis, analysis, selected.Jobs[e.ID]).Scan(&p.JobID, &file.hash, &published, &stage, &file.path, &file.fileHash)
 			if err != nil {
 				return out, err
 			}

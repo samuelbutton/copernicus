@@ -113,7 +113,7 @@ Classification checks membership, ambiguity, analysis content, result availabili
 An unmatched row can therefore contain an incomplete execution.
 Per-side completion counts still expose that absence.
 The add-only catalog currently prevents replacing an analysis definition under an existing name.
-The content-conflict guard also protects later analysis selection and independently constructed snapshots.
+The content-conflict guard also protects selected reanalyses and independently constructed snapshots.
 
 ## Deltas and denominators
 
@@ -182,7 +182,7 @@ Every page recalculates current availability; this is not a saved comparison.
 
 ## Limits, failures, and cleanup
 
-Comparison opens SQLite in read-only mode and never changes schema four.
+Comparison opens SQLite in read-only mode and never migrates the database.
 It reads only indexed outcomes assigned to the exact selected jobs.
 Missing, changed, or unreadable supporting files become incomplete before querying.
 No result cache can retain a removed passing outcome.
@@ -218,3 +218,16 @@ make clean
 Expect exit code `0` and graceful server shutdown.
 Cleanup removes this walkthrough's database, exchange, reports, and generated application builds.
 It preserves source files, installed dependencies, and unrelated databases.
+
+## Choose the scores on each side
+
+`--baseline-analysis ID` and `--candidate-analysis ID` select saved analyses independently.
+Both default to `original`.
+The equivalent HTTP parameters are `baseline_analysis` and `candidate_analysis`.
+The browser exposes both choices and preserves them in review and pagination links.
+
+Pairing uses each test's original frozen analysis name.
+Selected template content then determines scoring compatibility.
+Changing one side to a different template makes matching rows incomparable; matching both sides restores compatible deltas.
+An unknown selection fails explicitly, including when both sides use the same request.
+Follow the [reanalysis procedure](reanalysis.md) for commands, expected outcomes, and cleanup.

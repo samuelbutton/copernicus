@@ -46,6 +46,10 @@ func saveJobs(ctx context.Context, tx *sql.Tx, snapshot request.Snapshot) error 
 			return fmt.Errorf("save outgoing job: %w", err)
 		}
 	}
+	return checkOutboxLimits(ctx, tx)
+}
+
+func checkOutboxLimits(ctx context.Context, tx *sql.Tx) error {
 	var count, size int64
 	if err := tx.QueryRowContext(ctx, "SELECT count(*), coalesce(sum(length(content)), 0) FROM outbox").Scan(&count, &size); err != nil {
 		return err
@@ -148,7 +152,7 @@ func (s *Store) PublishOutbox(ctx context.Context, directory string, limit int) 
 		if err != nil {
 			return count, err
 		}
-		if job.JobID != id || job.ExecutionID != executionID || job.CorrelationID != requestID || job.JobKind != "run" {
+		if job.JobID != id || job.ExecutionID != executionID || job.CorrelationID != requestID || (job.JobKind != "run" && job.JobKind != "analysis") {
 			return count, errors.New("outbox job identity mismatch")
 		}
 		if err := destination.Publish(ctx, []byte(data)); err != nil {

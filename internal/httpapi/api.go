@@ -24,6 +24,7 @@ func Handler(db *store.Store, authority, duckdb string) http.Handler {
 
 func handler(db *store.Store, authority, duckdb string, assets map[string][]byte) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/api/requests/{id}/analyses", analysisHandler(db))
 	mux.HandleFunc("/api/requests/{id}/executions/{execution}/ticks/{tick}", func(w http.ResponseWriter, r *http.Request) {
 		tick, err := strconv.Atoi(r.PathValue("tick"))
 		if !validID(w, r) {
@@ -33,7 +34,11 @@ func handler(db *store.Store, authority, duckdb string, assets map[string][]byte
 			failure(w, 400, "invalid evidence identifier")
 			return
 		}
-		result, err := db.Evidence(r.Context(), r.PathValue("id"), r.PathValue("execution"), tick)
+		analysis, ok := analysisQuery(w, r)
+		if !ok {
+			return
+		}
+		result, err := db.EvidenceAnalysis(r.Context(), r.PathValue("id"), r.PathValue("execution"), analysis, tick)
 		send(w, result, err)
 	})
 	mux.HandleFunc("/api/catalog", func(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +53,11 @@ func handler(db *store.Store, authority, duckdb string, assets map[string][]byte
 			failure(w, 400, "invalid execution identifier")
 			return
 		}
-		result, err := db.Review(r.Context(), r.PathValue("id"), r.PathValue("execution"))
+		analysis, ok := analysisQuery(w, r)
+		if !ok {
+			return
+		}
+		result, err := db.ReviewAnalysis(r.Context(), r.PathValue("id"), r.PathValue("execution"), analysis)
 		send(w, result, err)
 	})
 	mux.HandleFunc("/api/comparisons", comparisonHandler(db, duckdb))
@@ -84,7 +93,11 @@ func handler(db *store.Store, authority, duckdb string, assets map[string][]byte
 		if !validID(w, r) {
 			return
 		}
-		result, err := db.Progress(r.Context(), r.PathValue("id"))
+		analysis, ok := analysisQuery(w, r)
+		if !ok {
+			return
+		}
+		result, err := db.ProgressAnalysis(r.Context(), r.PathValue("id"), analysis)
 		send(w, result, err)
 	})
 	mux.HandleFunc("/api/results", func(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +144,7 @@ func handler(db *store.Store, authority, duckdb string, assets map[string][]byte
 		if assets != nil {
 			w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
 		}
-		write := assets != nil && r.Method == http.MethodPost && r.URL.Path == "/api/requests"
+		write := assets != nil && r.Method == http.MethodPost && (r.URL.Path == "/api/requests" || strings.HasPrefix(r.URL.Path, "/api/requests/") && strings.HasSuffix(r.URL.Path, "/analyses"))
 		if write && (r.Header.Get("Origin") != "http://"+authority || r.Header.Get("Content-Type") != "application/json" || r.Header.Get("X-Copernicus-Request") != "1") {
 			failure(w, http.StatusForbidden, "same-origin JSON request required")
 			return

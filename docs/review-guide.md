@@ -37,7 +37,7 @@ The first page shows an empty request list and **Create request**.
 An occupied port causes startup failure.
 Use the printed address, including its numeric host and port.
 
-The `--web-dir` option enables request creation and opens the local database for writes.
+The `--web-dir` option enables request and analysis creation and opens the local database for writes.
 Without that option, `serve` retains its read-only API mode.
 Both modes reject foreign browser origins and unexpected hostnames.
 The interface uses local assets and makes no external requests.
@@ -102,10 +102,10 @@ Other scores can improve or fail independently.
 Select **Candidate: stopped-obstacle**.
 Open a **Tick** link in the collision-count row.
 The evidence section shows the cited recording tick and its time in milliseconds.
-Expand **Scenario**, **Braking rule**, or **Score limits** to inspect the saved inputs.
+Expand **Scenario**, **Braking rule**, or **Original score limits** to inspect the saved inputs.
 **Result identity** exposes the selected result and recording hashes.
 
-Select **Back to comparison** to restore the selected requests and page.
+Select **Back to comparison** to restore the selected requests, scoring configurations, and page.
 The address preserves the selected request, execution, comparison page, and evidence tick.
 Reloading a review link opens that same selection.
 Comparison counts always cover all groups, including groups on other pages.
@@ -172,3 +172,5 @@ Expect graceful shutdown and exit code `0`.
 Cleanup removes this walkthrough's database, exchange, logs, and generated builds.
 It preserves source files and installed dependencies.
 To remove test output, run `rm -rf web/test-results web/playwright-report` from the repository root.
+
+Follow the [reanalysis guide](reanalysis.md) to request new scores and choose saved analyses independently on each comparison side.

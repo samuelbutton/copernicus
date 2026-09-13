@@ -19,7 +19,7 @@ func comparisonHandler(db *store.Store, duckdb string) http.HandlerFunc {
 			return
 		}
 		for key, values := range q {
-			if len(values) != 1 || (key != "baseline" && key != "candidate" && key != "after" && key != "limit") {
+			if len(values) != 1 || (key != "baseline" && key != "candidate" && key != "after" && key != "limit" && key != "baseline_analysis" && key != "candidate_analysis") {
 				failure(w, http.StatusBadRequest, "invalid query parameter")
 				return
 			}
@@ -40,7 +40,18 @@ func comparisonHandler(db *store.Store, duckdb string) http.HandlerFunc {
 			failure(w, http.StatusTooManyRequests, "comparison busy")
 			return
 		}
-		result, err := db.Compare(r.Context(), q.Get("baseline"), q.Get("candidate"), duckdb)
+		baselineAnalysis, candidateAnalysis := q.Get("baseline_analysis"), q.Get("candidate_analysis")
+		if baselineAnalysis == "" {
+			baselineAnalysis = store.OriginalAnalysis
+		}
+		if candidateAnalysis == "" {
+			candidateAnalysis = store.OriginalAnalysis
+		}
+		if catalog.ValidateID(baselineAnalysis) != nil || catalog.ValidateID(candidateAnalysis) != nil {
+			failure(w, 400, "invalid analysis selection")
+			return
+		}
+		result, err := db.CompareAnalyses(r.Context(), q.Get("baseline"), q.Get("candidate"), baselineAnalysis, candidateAnalysis, duckdb)
 		if err != nil {
 			send(w, nil, err)
 			return

@@ -1,3 +1,4 @@
+import { AnalysisChoice } from "./Analysis";
 import { useState } from "react";
 import { comparisonSchema, useLive, useRequests } from "./api";
 import type { Entry } from "./api";
@@ -8,14 +9,20 @@ export function Comparison({
   baseline,
   candidate,
   after,
+  baselineAnalysis,
+  candidateAnalysis,
 }: {
   baseline: string;
   candidate: string;
   after: string;
+  baselineAnalysis: string;
+  candidateAnalysis: string;
 }) {
   const requests = useRequests();
   const [left, setLeft] = useState(baseline);
   const [right, setRight] = useState(candidate);
+  const [leftAnalysis, setLeftAnalysis] = useState(baselineAnalysis);
+  const [rightAnalysis, setRightAnalysis] = useState(candidateAnalysis);
   return (
     <>
       <p className="eyebrow">Baseline → candidate</p>
@@ -36,35 +43,69 @@ export function Comparison({
               className="compare-form"
               onSubmit={(event) => {
                 event.preventDefault();
-                navigate({ view: "compare", baseline: left, candidate: right });
+                navigate({
+                  view: "compare",
+                  baseline: left,
+                  candidate: right,
+                  baseline_analysis: leftAnalysis,
+                  candidate_analysis: rightAnalysis,
+                });
               }}
             >
-              <label>
-                Baseline request
-                <select
-                  required
-                  value={left}
-                  onChange={(event) => setLeft(event.target.value)}
-                >
-                  <option value="">Choose baseline</option>
-                  {ids.map((id) => (
-                    <option key={id}>{id}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Candidate request
-                <select
-                  required
-                  value={right}
-                  onChange={(event) => setRight(event.target.value)}
-                >
-                  <option value="">Choose candidate</option>
-                  {ids.map((id) => (
-                    <option key={id}>{id}</option>
-                  ))}
-                </select>
-              </label>
+              <fieldset>
+                <legend>Baseline</legend>
+                <label>
+                  Baseline request
+                  <select
+                    required
+                    value={left}
+                    onChange={(event) => {
+                      setLeft(event.target.value);
+                      setLeftAnalysis("original");
+                    }}
+                  >
+                    <option value="">Choose baseline</option>
+                    {ids.map((id) => (
+                      <option key={id}>{id}</option>
+                    ))}
+                  </select>
+                </label>
+                {left && (
+                  <AnalysisChoice
+                    requestID={left}
+                    label="Baseline scores"
+                    value={leftAnalysis}
+                    onChange={setLeftAnalysis}
+                  />
+                )}
+              </fieldset>
+              <fieldset>
+                <legend>Candidate</legend>
+                <label>
+                  Candidate request
+                  <select
+                    required
+                    value={right}
+                    onChange={(event) => {
+                      setRight(event.target.value);
+                      setRightAnalysis("original");
+                    }}
+                  >
+                    <option value="">Choose candidate</option>
+                    {ids.map((id) => (
+                      <option key={id}>{id}</option>
+                    ))}
+                  </select>
+                </label>
+                {right && (
+                  <AnalysisChoice
+                    requestID={right}
+                    label="Candidate scores"
+                    value={rightAnalysis}
+                    onChange={setRightAnalysis}
+                  />
+                )}
+              </fieldset>
               <button className="primary" type="submit">
                 Compare requests
               </button>
@@ -73,7 +114,13 @@ export function Comparison({
         }
       </Load>
       {baseline && candidate ? (
-        <Report baseline={baseline} candidate={candidate} after={after} />
+        <Report
+          baseline={baseline}
+          candidate={candidate}
+          after={after}
+          baselineAnalysis={baselineAnalysis}
+          candidateAnalysis={candidateAnalysis}
+        />
       ) : (
         <p className="notice">
           Choose both requests to start the review. You can compare incomplete
@@ -87,11 +134,13 @@ function Entries({
   entries,
   requestID,
   label,
+  analysis,
   context,
 }: {
   entries: Entry[];
   requestID: string;
   label: string;
+  analysis: string;
   context: Record<string, string>;
 }) {
   if (entries.length === 0) return <p>Not selected</p>;
@@ -105,6 +154,7 @@ function Entries({
               view: "execution",
               id: requestID,
               execution: entry.execution_id,
+              analysis,
             })}
           >
             {label}: {entry.test_id}
@@ -120,16 +170,26 @@ function Report({
   baseline,
   candidate,
   after,
+  baselineAnalysis,
+  candidateAnalysis,
 }: {
   baseline: string;
   candidate: string;
   after: string;
+  baselineAnalysis: string;
+  candidateAnalysis: string;
 }) {
   const query = useLive(
-    `/api/comparisons?${new URLSearchParams({ baseline, candidate, after, limit: "25" })}`,
+    `/api/comparisons?${new URLSearchParams({ baseline, candidate, after, baseline_analysis: baselineAnalysis, candidate_analysis: candidateAnalysis, limit: "25" })}`,
     comparisonSchema,
   );
-  const context = { baseline, candidate, after };
+  const context = {
+    baseline,
+    candidate,
+    after,
+    baseline_analysis: baselineAnalysis,
+    candidate_analysis: candidateAnalysis,
+  };
   return (
     <Load query={query} name="comparison">
       {(data) => {
@@ -141,10 +201,17 @@ function Report({
                 <section key={index}>
                   <h2>
                     {index === 0 ? "Baseline" : "Candidate"}:{" "}
-                    <a href={link({ view: "request", id: side.request_id })}>
+                    <a
+                      href={link({
+                        view: "request",
+                        id: side.request_id,
+                        analysis: side.analysis_selection,
+                      })}
+                    >
                       {side.request_id}
                     </a>
                   </h2>
+                  <p>Selected scores: {side.analysis_selection}</p>
                   <Totals data={side} />
                 </section>
               ))}
@@ -193,6 +260,7 @@ function Report({
                           entries={row.baseline}
                           requestID={baseline}
                           label="Baseline"
+                          analysis={baselineAnalysis}
                           context={context}
                         />
                       </td>
@@ -201,6 +269,7 @@ function Report({
                           entries={row.candidate}
                           requestID={candidate}
                           label="Candidate"
+                          analysis={candidateAnalysis}
                           context={context}
                         />
                       </td>
@@ -246,16 +315,15 @@ function Report({
             </div>
             <nav className="actions" aria-label="Comparison pages">
               {after && (
-                <a href={link({ view: "compare", baseline, candidate })}>
+                <a href={link({ ...context, view: "compare", after: "" })}>
                   First page
                 </a>
               )}
               {data.next_after && (
                 <a
                   href={link({
+                    ...context,
                     view: "compare",
-                    baseline,
-                    candidate,
                     after: data.next_after,
                   })}
                 >
