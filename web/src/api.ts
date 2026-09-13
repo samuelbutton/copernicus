@@ -11,6 +11,14 @@ const frozen = z.object({
   sha256: hash,
   content: z.record(z.string(), z.json()),
 });
+export const budgetsSchema = z.array(
+  z.object({
+    team_id: id,
+    tick_limit: integer,
+    reserved_ticks: integer,
+    remaining_ticks: integer,
+  }),
+);
 export const catalogSchema = z.object({
   analysis_templates: z.array(z.object({ id })),
   controllers: z.array(z.object({ id, name: id, version: count })),
@@ -84,6 +92,16 @@ const metric = z.object({
 });
 export const comparisonSchema = z.object({
   comparison: z.object({
+    view: z.object({
+      filter: z.string(),
+      sort: z.string(),
+      after: z.string(),
+      limit: count,
+      matched_rows: count,
+      next_after: hash.optional(),
+      cache_key: hash.optional(),
+      cache_state: z.enum(["hit", "saved", "read_only", "bypass_partial"]),
+    }),
     baseline: selection,
     candidate: selection,
     counts: z.object({
@@ -204,6 +222,7 @@ export async function fetchJSON<T>(
       403: "Access was denied. Open the review server at its printed local address.",
       404: "This item is unavailable. Return to the request list or retry after importing results.",
       409: "This request name already has different inputs. Choose a new name, or open the saved request.",
+      422: "This request exceeds the team’s remaining simulation ticks. Choose fewer tests or ask for a higher team limit, then retry.",
       429: "The local server is busy. Wait a moment, then retry.",
     };
     throw new Error(

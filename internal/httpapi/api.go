@@ -24,6 +24,14 @@ func Handler(db *store.Store, authority, duckdb string) http.Handler {
 
 func handler(db *store.Store, authority, duckdb string, assets map[string][]byte) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/api/budgets", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RawQuery != "" {
+			failure(w, 400, "budget listing accepts no query")
+			return
+		}
+		result, err := db.Budgets(r.Context())
+		send(w, result, err)
+	})
 	mux.HandleFunc("/api/requests/{id}/analyses", analysisHandler(db))
 	mux.HandleFunc("/api/requests/{id}/executions/{execution}/ticks/{tick}", func(w http.ResponseWriter, r *http.Request) {
 		tick, err := strconv.Atoi(r.PathValue("tick"))

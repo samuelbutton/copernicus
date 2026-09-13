@@ -6,6 +6,10 @@ Some terms describe the planned review workflow; the README states which behavio
 | Term | Meaning |
 | --- | --- |
 | Acknowledgement | A saved confirmation that a complete job file was published durably. |
+| Admission | Accepting a request only when its team can reserve the maximum simulation ticks. |
+| Budget reservation | The immutable simulation tick allowance charged to one accepted request. |
+| Cache | Bounded saved calculations that can be reused when their exact inputs still match. |
+| FIFO | First in, first out: remove the oldest saved entry first. |
 | Analysis | One scoring operation on a recording with a complete metric configuration. |
 | Analysis selection | A saved scoring configuration and its exact job for every test in a request. |
 | Analysis template | Metric names, versions, and settings used to score a recording. |

@@ -16,6 +16,13 @@ func (s *Store) Compare(ctx context.Context, baseline, candidate, duckdb string)
 	return s.CompareAnalyses(ctx, baseline, candidate, OriginalAnalysis, OriginalAnalysis, duckdb)
 }
 func (s *Store) CompareAnalyses(ctx context.Context, baseline, candidate, baselineAnalysis, candidateAnalysis, duckdb string) (comparison.Report, error) {
+	plan, files, err := s.comparisonInputs(ctx, baseline, candidate, baselineAnalysis, candidateAnalysis)
+	if err != nil {
+		return comparison.Report{}, err
+	}
+	return comparison.Evaluate(ctx, duckdb, plan, files)
+}
+func (s *Store) comparisonInputs(ctx context.Context, baseline, candidate, baselineAnalysis, candidateAnalysis string) (comparison.Report, map[string][]byte, error) {
 	files := map[string][]byte{}
 	size := 0
 	accept := func(file exchange.ResultFile) error {
@@ -34,16 +41,16 @@ func (s *Store) CompareAnalyses(ctx context.Context, baseline, candidate, baseli
 	}
 	b, err := s.selection(ctx, baseline, baselineAnalysis, accept)
 	if err != nil {
-		return comparison.Report{}, err
+		return comparison.Report{}, nil, err
 	}
 	c := b
 	if baseline != candidate || baselineAnalysis != candidateAnalysis {
 		c, err = s.selection(ctx, candidate, candidateAnalysis, accept)
 		if err != nil {
-			return comparison.Report{}, err
+			return comparison.Report{}, nil, err
 		}
 	}
-	return comparison.Evaluate(ctx, duckdb, comparison.Plan(b, c), files)
+	return comparison.Plan(b, c), files, nil
 }
 
 func (s *Store) selection(ctx context.Context, id, analysis string, accept func(exchange.ResultFile) error) (comparison.Selection, error) {

@@ -27,6 +27,9 @@ export function Execution({ route }: { route: URLSearchParams }) {
               baseline,
               candidate,
               after: route.get("after") ?? "",
+              filter: route.get("filter") || "all",
+              sort: route.get("sort") || "id",
+              limit: route.get("limit") || "25",
               baseline_analysis: route.get("baseline_analysis") || "original",
               candidate_analysis: route.get("candidate_analysis") || "original",
             })}

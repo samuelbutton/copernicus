@@ -67,7 +67,7 @@ func TestReadOnlyAPIAndLocalBoundary(t *testing.T) {
 		{"/api/comparisons?baseline=review-one&candidate=review-two&baseline_analysis=original&candidate_analysis=original", 200},
 		{"/api/comparisons?baseline=review-one&candidate=review-two&candidate_analysis=missing", 404},
 		{"/api/comparisons?baseline=review-one&candidate=review-two&candidate_analysis=original&candidate_analysis=original", 400},
-		{"/healthz", 200}, {"/readyz", 200}, {"/api/requests", 200}, {"/api/requests?limit=1", 200},
+		{"/api/budgets", 200}, {"/api/comparisons?baseline=review-one&candidate=review-two&filter=bad", 400}, {"/api/comparisons?baseline=review-one&candidate=review-two&sort=bad", 400}, {"/healthz", 200}, {"/readyz", 200}, {"/api/requests", 200}, {"/api/requests?limit=1", 200},
 		{"/api/requests/review-one", 200}, {"/api/requests/review-two/status", 200}, {"/api/requests/unknown/status", 404},
 		{"/api/requests/INVALID/status", 400}, {"/api/results", 200}, {"/api/index", 200}, {"/unknown", 404},
 		{"/api/results?limit=101", 400}, {"/api/results?limit=0", 400}, {"/api/results?limit=1&limit=2", 400}, {"/api/results?wrong=1", 400}, {"/api/results?limit=1;ignored=2", 400},

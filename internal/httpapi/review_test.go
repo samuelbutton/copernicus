@@ -84,6 +84,16 @@ func TestReviewServerCreationBoundary(t *testing.T) {
 	if r := call("POST", "/api/requests/browser-one/analyses", `{"template_id":"standard-v1"}`, "http://127.0.0.1:8080", "application/json", "1"); r.Code != 400 {
 		t.Fatal("analysis accepted missing recordings")
 	}
+	if err := db.SetBudget(ctx, "local", 200); err != nil {
+		t.Fatal(err)
+	}
+	rejected := strings.Replace(body, "browser-one", "over-budget", 1)
+	if r := call("POST", "/api/requests", rejected, "http://127.0.0.1:8080", "application/json", "1"); r.Code != 422 {
+		t.Fatal("budget rejection not exposed", r.Code)
+	}
+	if r := call("POST", "/api/requests", body, "http://127.0.0.1:8080", "application/json", "1"); r.Code != 200 {
+		t.Fatal("accepted retry blocked by exhausted budget", r.Code)
+	}
 	changed := strings.Replace(body, `"baseline"`, `"candidate"`, 1)
 	if r := call("POST", "/api/requests", changed, "http://127.0.0.1:8080", "application/json", "1"); r.Code != 409 {
 		t.Fatal("identity conflict not reported")

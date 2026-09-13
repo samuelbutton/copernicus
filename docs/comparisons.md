@@ -182,10 +182,10 @@ Every page recalculates current availability; this is not a saved comparison.
 
 ## Limits, failures, and cleanup
 
-Comparison opens SQLite in read-only mode and never migrates the database.
+Comparison defaults to read-only SQLite; `--save` enables terminal-page storage and schema upgrades.
 It reads only indexed outcomes assigned to the exact selected jobs.
 Missing, changed, or unreadable supporting files become incomplete before querying.
-No result cache can retain a removed passing outcome.
+Saved results cannot supply a passing outcome when its supporting files are unavailable.
 
 Selected result copies are limited to 64 mebibytes across both sides.
 DuckDB uses one thread, a 128-megabyte memory setting, no disk spill, and a ten-second deadline.
@@ -231,3 +231,5 @@ Selected template content then determines scoring compatibility.
 Changing one side to a different template makes matching rows incomparable; matching both sides restores compatible deltas.
 An unknown selection fails explicitly, including when both sides use the same request.
 Follow the [reanalysis procedure](reanalysis.md) for commands, expected outcomes, and cleanup.
+
+[Saved comparison decisions](decisions.md#comparison-identity-and-freshness) define cache identity, filters, ordering, page limits, and partial-result bypass.

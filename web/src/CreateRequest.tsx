@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { catalogSchema, createdSchema, fetchJSON, useLive } from "./api";
+import {
+  budgetsSchema,
+  catalogSchema,
+  createdSchema,
+  fetchJSON,
+  useLive,
+} from "./api";
 import { Load } from "./components";
 import { navigate } from "./navigation";
 
 const draftSchema = z.object({
+  team: z.string().max(64).default(""),
   name: z.string().max(64),
   collection: z.string().max(64),
   controller: z.string().max(64),
@@ -17,6 +24,7 @@ const storageKey = "copernicus-request-draft-v1";
 function emptyDraft(): Draft {
   return {
     name: `review-${crypto.randomUUID()}`,
+    team: "",
     collection: "",
     controller: "",
     suites: [],
@@ -34,6 +42,7 @@ function loadDraft(): Draft {
   }
 }
 export function CreateRequest() {
+  const budgets = useLive("/api/budgets", budgetsSchema);
   const catalog = useLive("/api/catalog", catalogSchema);
   const client = useQueryClient();
   const [draft, setDraft] = useState(loadDraft);
@@ -42,6 +51,7 @@ export function CreateRequest() {
   const mutation = useMutation({
     mutationFn: (input: Draft) =>
       fetchJSON("/api/requests", createdSchema, undefined, {
+        ...(input.team ? { team_id: input.team } : {}),
         id: input.name,
         collection_id: input.collection,
         controller_id: input.controller,
@@ -53,6 +63,7 @@ export function CreateRequest() {
       }),
     onSuccess: (record) => {
       void client.invalidateQueries({ queryKey: ["requests"] });
+      void client.invalidateQueries({ queryKey: ["/api/budgets"] });
       update(emptyDraft());
       navigate({ view: "request", id: record.request_id });
     },
@@ -112,6 +123,51 @@ export function CreateRequest() {
                   Use lowercase letters, numbers, underscores, or hyphens. Start
                   with a letter. Each name identifies one saved request.
                 </p>
+                <Load query={budgets} name="team budgets">
+                  {(items) => (
+                    <div>
+                      <label>
+                        Team budget
+                        <select
+                          value={draft.team || "local"}
+                          onChange={(event) =>
+                            update({
+                              ...draft,
+                              team:
+                                event.target.value === "local"
+                                  ? ""
+                                  : event.target.value,
+                            })
+                          }
+                        >
+                          {!items.some(
+                            (item) => item.team_id === (draft.team || "local"),
+                          ) && (
+                            <option value={draft.team || "local"} disabled>
+                              Unavailable team: {draft.team || "local"}
+                            </option>
+                          )}
+                          {items.map((item) => (
+                            <option key={item.team_id} value={item.team_id}>
+                              {item.team_id}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <p className="muted">
+                        {items
+                          .find(
+                            (item) => item.team_id === (draft.team || "local"),
+                          )
+                          ?.remaining_ticks.toLocaleString() ??
+                          "Unavailable"}{" "}
+                        simulation ticks remain. Each request reserves its
+                        maximum test length. Saved recordings need no additional
+                        simulation ticks.
+                      </p>
+                    </div>
+                  )}
+                </Load>
                 <label>
                   Test collection
                   <select

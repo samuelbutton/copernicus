@@ -8,7 +8,7 @@ import (
 	"github.com/samuelbutton/copernicus/internal/request"
 )
 
-const QueryVersion = 1
+const QueryVersion = 2
 
 // Key excludes controller content and catalog labels other than analysis name.
 type Key struct {
@@ -97,6 +97,7 @@ type Counts struct {
 }
 
 type Report struct {
+	View         *ViewInfo `json:"view,omitempty"`
 	QueryVersion int       `json:"query_version"`
 	Baseline     Selection `json:"baseline"`
 	Candidate    Selection `json:"candidate"`

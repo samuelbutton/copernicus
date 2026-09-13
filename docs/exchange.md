@@ -232,3 +232,5 @@ Publication retains the same destination, byte checks, and recovery rules.
 Each analysis job supplies a pinned bag reference and complete scoring template.
 Equivalent scoring content reuses the original job or an existing analysis job.
 The publisher does not launch simulation or analysis workers.
+
+[Admission](decisions.md#budget-decisions) reserves simulation ticks before jobs commit, so rejected requests never reach publication.

@@ -174,3 +174,5 @@ It preserves source files and installed dependencies.
 To remove test output, run `rm -rf web/test-results web/playwright-report` from the repository root.
 
 Follow the [reanalysis guide](reanalysis.md) to request new scores and choose saved analyses independently on each comparison side.
+
+The [admission and comparison guide](decisions.md) explains team budgets, filters, ordering, and saved-page reuse.

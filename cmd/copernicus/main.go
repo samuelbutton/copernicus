@@ -21,17 +21,21 @@ Usage:
   copernicus catalog expand --db PATH --collection ID
   copernicus catalog set-suite --db PATH --suite ID --tests ID,ID
   copernicus request create --db PATH --id ID --collection ID --controller ID --requester ID
-                           [--priority 0..3] [--seed N] [--repeat N]
+                           [--priority 0..3] [--seed N] [--repeat N] [--team ID]
   copernicus request show --db PATH --id ID
   copernicus request status --db PATH --id ID
   copernicus results import --db PATH --exchange-dir PATH [events/FILE.json results/FILE.json ...]
   copernicus results rebuild --db PATH --exchange-dir PATH
   copernicus results show --db PATH [--after CURSOR] [--limit 1..100]
+  copernicus budget set --db PATH --team ID --ticks N
+  copernicus budget show --db PATH
   copernicus analysis create --db PATH --request ID --template ID
   copernicus analysis list --db PATH --request ID
   copernicus analysis status --db PATH --request ID [--analysis ID]
   copernicus compare --db PATH --baseline ID --candidate ID [--duckdb PATH]
                      [--baseline-analysis ID] [--candidate-analysis ID]
+                     [--save] [--filter all|regressions|incomplete|incomparable|errors]
+                     [--sort id|id-desc] [--after HASH] [--limit 1..2000]
   copernicus serve --db PATH [--port PORT] [--duckdb PATH] [--web-dir PATH]
   copernicus outbox show --db PATH
   copernicus outbox publish --db PATH --exchange-dir PATH [--limit 1..1000]
@@ -73,11 +77,14 @@ func run(ctx context.Context, args []string, output io.Writer) error {
 		defer cancel()
 		return runCompare(ctx, args[1:], output)
 	}
-	if len(args) < 2 || (args[0] != "catalog" && args[0] != "request" && args[0] != "outbox" && args[0] != "results" && args[0] != "analysis") {
+	if len(args) < 2 || (args[0] != "catalog" && args[0] != "request" && args[0] != "outbox" && args[0] != "results" && args[0] != "analysis" && args[0] != "budget") {
 		return errors.New("unsupported arguments; use copernicus --help")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	if args[0] == "budget" {
+		return runBudget(ctx, args[1:], output)
+	}
 	if args[0] == "analysis" {
 		return runAnalysis(ctx, args[1:], output)
 	}

@@ -11,14 +11,23 @@ export function Comparison({
   after,
   baselineAnalysis,
   candidateAnalysis,
+  filter,
+  sort,
+  limit,
 }: {
   baseline: string;
   candidate: string;
   after: string;
   baselineAnalysis: string;
   candidateAnalysis: string;
+  filter: string;
+  sort: string;
+  limit: string;
 }) {
   const requests = useRequests();
+  const [rowFilter, setRowFilter] = useState(filter);
+  const [rowSort, setRowSort] = useState(sort);
+  const [pageSize, setPageSize] = useState(limit);
   const [left, setLeft] = useState(baseline);
   const [right, setRight] = useState(candidate);
   const [leftAnalysis, setLeftAnalysis] = useState(baselineAnalysis);
@@ -45,6 +54,9 @@ export function Comparison({
                 event.preventDefault();
                 navigate({
                   view: "compare",
+                  filter: rowFilter,
+                  sort: rowSort,
+                  limit: pageSize,
                   baseline: left,
                   candidate: right,
                   baseline_analysis: leftAnalysis,
@@ -106,6 +118,43 @@ export function Comparison({
                   />
                 )}
               </fieldset>
+              <fieldset>
+                <legend>Comparison view</legend>
+                <label>
+                  Show groups
+                  <select
+                    value={rowFilter}
+                    onChange={(event) => setRowFilter(event.target.value)}
+                  >
+                    <option value="all">All groups</option>
+                    <option value="regressions">Metric regressions</option>
+                    <option value="incomplete">Incomplete</option>
+                    <option value="incomparable">Incompatible</option>
+                    <option value="errors">Execution errors</option>
+                  </select>
+                </label>
+                <label>
+                  Group order
+                  <select
+                    value={rowSort}
+                    onChange={(event) => setRowSort(event.target.value)}
+                  >
+                    <option value="id">Group ID, ascending</option>
+                    <option value="id-desc">Group ID, descending</option>
+                  </select>
+                </label>
+                <label>
+                  Groups per page
+                  <select
+                    value={pageSize}
+                    onChange={(event) => setPageSize(event.target.value)}
+                  >
+                    {[10, 25, 50].map((size) => (
+                      <option key={size}>{size}</option>
+                    ))}
+                  </select>
+                </label>
+              </fieldset>
               <button className="primary" type="submit">
                 Compare requests
               </button>
@@ -118,6 +167,9 @@ export function Comparison({
           baseline={baseline}
           candidate={candidate}
           after={after}
+          filter={filter}
+          sort={sort}
+          limit={limit}
           baselineAnalysis={baselineAnalysis}
           candidateAnalysis={candidateAnalysis}
         />
@@ -172,18 +224,27 @@ function Report({
   after,
   baselineAnalysis,
   candidateAnalysis,
+  filter,
+  sort,
+  limit,
 }: {
   baseline: string;
   candidate: string;
   after: string;
   baselineAnalysis: string;
   candidateAnalysis: string;
+  filter: string;
+  sort: string;
+  limit: string;
 }) {
   const query = useLive(
-    `/api/comparisons?${new URLSearchParams({ baseline, candidate, after, baseline_analysis: baselineAnalysis, candidate_analysis: candidateAnalysis, limit: "25" })}`,
+    `/api/comparisons?${new URLSearchParams({ baseline, candidate, after, baseline_analysis: baselineAnalysis, candidate_analysis: candidateAnalysis, filter, sort, limit })}`,
     comparisonSchema,
   );
   const context = {
+    filter,
+    sort,
+    limit,
     baseline,
     candidate,
     after,
@@ -196,6 +257,15 @@ function Report({
         const report = data.comparison;
         return (
           <section aria-label="Comparison results">
+            <p className="notice">
+              {report.view.cache_state === "hit"
+                ? "Saved comparison reused. Supporting files were checked again."
+                : report.view.cache_state === "saved"
+                  ? "Comparison saved for these inputs and this view."
+                  : report.view.cache_state === "bypass_partial"
+                    ? "Live comparison: some selected tests are incomplete. This view is not saved."
+                    : "Live comparison. Saving is disabled for this read."}
+            </p>
             <div className="sides">
               {[report.baseline, report.candidate].map((side, index) => (
                 <section key={index}>
@@ -228,6 +298,11 @@ function Report({
               {report.counts.incomparable} incompatible, {report.counts.errors}{" "}
               errors, {report.counts.added} added, {report.counts.removed}{" "}
               removed.
+            </p>
+            <p>
+              {report.rows.length} groups on this page ·{" "}
+              {report.view.matched_rows} match the selected filter. Counts above
+              cover all groups.
             </p>
             <p className="muted">
               Delta means candidate minus baseline. An improved score does not

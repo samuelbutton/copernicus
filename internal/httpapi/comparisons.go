@@ -19,7 +19,7 @@ func comparisonHandler(db *store.Store, duckdb string) http.HandlerFunc {
 			return
 		}
 		for key, values := range q {
-			if len(values) != 1 || (key != "baseline" && key != "candidate" && key != "after" && key != "limit" && key != "baseline_analysis" && key != "candidate_analysis") {
+			if len(values) != 1 || (key != "baseline" && key != "candidate" && key != "after" && key != "limit" && key != "baseline_analysis" && key != "candidate_analysis" && key != "filter" && key != "sort") {
 				failure(w, http.StatusBadRequest, "invalid query parameter")
 				return
 			}
@@ -51,24 +51,27 @@ func comparisonHandler(db *store.Store, duckdb string) http.HandlerFunc {
 			failure(w, 400, "invalid analysis selection")
 			return
 		}
-		result, err := db.CompareAnalyses(r.Context(), q.Get("baseline"), q.Get("candidate"), baselineAnalysis, candidateAnalysis, duckdb)
+		filter, sort := q.Get("filter"), q.Get("sort")
+		if filter == "" {
+			filter = "all"
+		}
+		if sort == "" {
+			sort = "id"
+		}
+		options := comparison.Options{Filter: filter, Sort: sort, After: after, Limit: limit}
+		if err := options.Validate(); err != nil {
+			failure(w, 400, "invalid comparison view")
+			return
+		}
+		result, err := db.CompareView(r.Context(), q.Get("baseline"), q.Get("candidate"), baselineAnalysis, candidateAnalysis, duckdb, options)
 		if err != nil {
 			send(w, nil, err)
 			return
 		}
-		start := 0
-		for start < len(result.Rows) && result.Rows[start].ID <= after {
-			start++
-		}
-		end := min(start+limit, len(result.Rows))
-		next := ""
-		if end < len(result.Rows) {
-			next = result.Rows[end-1].ID
-		}
-		result.Rows = result.Rows[start:end]
+
 		send(w, struct {
 			Report comparison.Report `json:"comparison"`
 			Next   string            `json:"next_after,omitempty"`
-		}{result, next}, nil)
+		}{result, result.View.NextAfter}, nil)
 	}
 }

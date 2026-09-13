@@ -268,3 +268,7 @@ The default read-only server rejects this write.
 Original results retain their exact job mapping.
 Index rebuild preserves all accepted analyses; selected progress never substitutes another result.
 The [reanalysis guide](reanalysis.md) provides the complete procedure and cleanup.
+
+`GET /api/budgets` lists configured team limits, reserved ticks, and remaining ticks.
+[Schema six](decisions.md) adds admission accounting and saved comparison pages.
+The review server may save derived terminal comparison pages during GET reads; the default read-only server cannot.

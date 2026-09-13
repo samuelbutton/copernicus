@@ -89,7 +89,7 @@ func createRequest(db *store.Store, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fields := map[string]json.RawMessage{}
-	allowed := map[string]bool{"id": true, "collection_id": true, "controller_id": true, "requester": true, "priority": true, "seed": true, "repeat": true, "suite_ids": true}
+	allowed := map[string]bool{"id": true, "collection_id": true, "controller_id": true, "requester": true, "priority": true, "seed": true, "repeat": true, "suite_ids": true, "team_id": true}
 	for decoder.More() {
 		token, err := decoder.Token()
 		name, ok := token.(string)
@@ -113,7 +113,7 @@ func createRequest(db *store.Store, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for name := range allowed {
-		if name != "suite_ids" && fields[name] == nil {
+		if name != "suite_ids" && name != "team_id" && fields[name] == nil {
 			failure(w, 400, "missing request field")
 			return
 		}
@@ -129,6 +129,14 @@ func createRequest(db *store.Store, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	record, err := db.CreateRequest(r.Context(), input, source)
+	if errors.Is(err, store.ErrBudgetExceeded) {
+		failure(w, 422, "team simulation budget exceeded")
+		return
+	}
+	if errors.Is(err, store.ErrTeamUnavailable) {
+		failure(w, 400, "team budget is not configured")
+		return
+	}
 	if errors.Is(err, request.ErrIdentityConflict) {
 		failure(w, 409, "this request name already has different inputs")
 		return

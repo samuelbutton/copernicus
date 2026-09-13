@@ -26,6 +26,7 @@ func runRequest(ctx context.Context, args []string, output io.Writer) (err error
 	var input request.Submission
 	flags.StringVar(&input.ID, "id", "", "submission identity")
 	if command == "create" {
+		flags.StringVar(&input.TeamID, "team", "", "local team budget")
 		flags.StringVar(&input.CollectionID, "collection", "", "collection identifier")
 		flags.StringVar(&input.ControllerID, "controller", "", "controller identifier")
 		flags.StringVar(&input.Requester, "requester", "", "requester identifier")

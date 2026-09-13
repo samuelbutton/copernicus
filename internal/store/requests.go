@@ -57,6 +57,9 @@ func (s *Store) CreateRequest(ctx context.Context, input request.Submission, sou
 	if _, err := tx.ExecContext(ctx, "INSERT INTO requests VALUES (?, ?, ?, ?, ?)", input.ID, string(submission), record.SubmissionSHA256, string(record.Snapshot), record.SnapshotSHA256); err != nil {
 		return empty, fmt.Errorf("save request: %w", err)
 	}
+	if err := reserveBudget(ctx, tx, snapshot); err != nil {
+		return empty, err
+	}
 	for i, e := range snapshot.Executions {
 		if _, err := tx.ExecContext(ctx, "INSERT INTO executions VALUES (?, ?, ?, ?, ?, ?)", e.ID, input.ID, i, e.Test.ID, e.Status, e.Reason); err != nil {
 			return empty, fmt.Errorf("save execution: %w", err)

@@ -26,7 +26,10 @@ var requestsSchema string
 const applicationID = 1129333588
 
 // Store owns the catalog connection pool. Callers close it when their command ends.
-type Store struct{ db *sql.DB }
+type Store struct {
+	db       *sql.DB
+	writable bool
+}
 
 // Open creates a catalog only when create is true. Inspection uses SQLite's
 // read-only mode and never initializes or upgrades a database.
@@ -72,7 +75,7 @@ func Open(ctx context.Context, path string, create bool) (*Store, error) {
 	}
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
-	s := &Store{db: db}
+	s := &Store{db: db, writable: create}
 	if err := s.initialize(ctx, create); err != nil {
 		_ = db.Close()
 		return nil, err
@@ -95,7 +98,7 @@ func (s *Store) initialize(ctx context.Context, create bool) error {
 	if err := tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		return fmt.Errorf("read catalog version: %w", err)
 	}
-	if app == applicationID && (version >= 1 && version <= 5) {
+	if app == applicationID && (version >= 1 && version <= 6) {
 		if create && version == 1 {
 			if _, err := tx.ExecContext(ctx, requestsSchema); err != nil {
 				return fmt.Errorf("upgrade request schema: %w", err)
@@ -116,6 +119,11 @@ func (s *Store) initialize(ctx context.Context, create bool) error {
 				return fmt.Errorf("upgrade analysis selections: %w", err)
 			}
 		}
+		if create && version < 6 {
+			if err := upgradeAdmission(ctx, tx); err != nil {
+				return fmt.Errorf("upgrade admission: %w", err)
+			}
+		}
 		return tx.Commit()
 	}
 	if !create || app != 0 || version != 0 {
@@ -130,6 +138,9 @@ func (s *Store) initialize(ctx context.Context, create bool) error {
 	}
 	if _, err := tx.ExecContext(ctx, schema+"\n"+requestsSchema+"\n"+outboxSchema+"\n"+resultsSchema+"\n"+analysisSchema); err != nil {
 		return fmt.Errorf("create catalog schema: %w", err)
+	}
+	if err := upgradeAdmission(ctx, tx); err != nil {
+		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit catalog schema: %w", err)

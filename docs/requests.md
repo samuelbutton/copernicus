@@ -162,11 +162,11 @@ Concurrent identical submissions return one accepted request and one set of exec
 A failed write or process exit before commit rolls back the request, execution records, and outgoing jobs.
 
 The [schema migration](../internal/store/requests-v2.sql) adds request storage to existing catalog databases without changing catalog records.
-Current write commands upgrade supported older schemas to version `5` in one transaction.
+Current write commands upgrade supported older schemas to version `6` in one transaction.
 The [outbox migration](../internal/store/outbox-v3.sql) adds jobs from existing frozen snapshots.
 
 Catalog inspection can still read version `1` without upgrading it.
-Request inspection accepts versions `2` through `5` through a read-only connection.
+Request inspection accepts versions `2` through `6` through a read-only connection.
 [Progress queries](lifecycle.md#completion-counts) require schema four or later.
 Unknown schema versions remain rejected.
 
@@ -199,3 +199,6 @@ The browser sends priority `1`, repeat `0`, requester `reviewer`, and a visible 
 The HTTP boundary requires explicit scalar fields and limits the submission to 131,072 bytes.
 
 [Reanalysis](reanalysis.md) adds immutable scoring selections without changing the request snapshot or its executions.
+
+[Admission limits](decisions.md#budget-decisions) reserve maximum simulation ticks in the request transaction.
+The optional `team_id` selects a configured local budget; omission preserves earlier submission bytes and uses team `local`.

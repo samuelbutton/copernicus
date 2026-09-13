@@ -16,6 +16,7 @@ You can load published results and check how many tests have finished.
 Missing files remain incomplete, and failed tests stay visible.
 You can compare two saved requests to see which measurements improved or became worse.
 You can score saved recordings again, preserve the original results, and choose which scores to compare.
+Team allowances limit new simulation work. Saved comparisons make repeated reviews reusable while checking that their evidence remains available.
 
 ## Technical summary
 
@@ -111,6 +112,11 @@ Use `serve --web-dir web/dist` to serve the built interface and its API from one
 
 Follow the [reanalysis guide](docs/reanalysis.md) to request new scores and select a scoring configuration for each comparison side.
 It verifies unchanged recordings, preserved original results, and restored comparison after matching metric versions.
+
+## Limit work and reuse comparisons
+
+Follow the [admission and saved-comparison guide](docs/decisions.md) to configure team budgets, verify safe retries, and reuse complete comparison pages.
+Partial results remain live and always bypass the cache.
 
 ## Verify and clean up
 

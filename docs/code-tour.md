@@ -37,7 +37,7 @@ The command imports validated results and serves the local review interface.
 | [internal/comparison/deltas.sql](../internal/comparison/deltas.sql) | Queries compatible metric values, pass flags, and deltas in DuckDB. |
 | [internal/comparison/duckdb.go](../internal/comparison/duckdb.go) | Restricts the query process to private copies of validated results. |
 | [internal/store/comparisons.go](../internal/store/comparisons.go) | Reads frozen selections and validates their exact selected outcomes. |
-| [cmd/copernicus/compare.go](../cmd/copernicus/compare.go) | Runs the read-only comparison command. |
+| [cmd/copernicus/compare.go](../cmd/copernicus/compare.go) | Runs comparison reads and optional terminal-page saving. |
 | [scripts/install-duckdb.sh](../scripts/install-duckdb.sh) | Installs the pinned executable after verifying its archive checksum. |
 | [cmd/copernicus/outbox.go](../cmd/copernicus/outbox.go) | Inspects delivery state and runs a bounded publication batch. |
 | [cmd/copernicus/requests.go](../cmd/copernicus/requests.go) | Creates and reads saved requests. |
@@ -95,3 +95,14 @@ The [comparison tests](../internal/comparison/comparison_test.go) cover equal va
 | [examples/reanalysis-catalog.json](../examples/reanalysis-catalog.json) | Supplies body-edge gap scoring without changing original definitions. |
 
 The [reanalysis guide](reanalysis.md) verifies preserved recordings and original results through the public execution boundary.
+
+| Admission and saved comparisons | Responsibility |
+| --- | --- |
+| [internal/request/budget.go](../internal/request/budget.go) | Calculates maximum simulation tick reservations from frozen ready executions. |
+| [internal/store/budgets.go](../internal/store/budgets.go) | Configures team limits, reserves admission atomically, and accounts for legacy requests. |
+| [internal/store/admission-v6.sql](../internal/store/admission-v6.sql) | Enforces budget reservations and immutable saved comparisons. |
+| [cmd/copernicus/budget.go](../cmd/copernicus/budget.go) | Sets cumulative limits and shows remaining team allowances. |
+| [internal/comparison/view.go](../internal/comparison/view.go) | Defines cache identity and filters, orders, and pages complete comparisons. |
+| [internal/store/saved_comparisons.go](../internal/store/saved_comparisons.go) | Revalidates evidence before cache lookup and bounds saved-page storage. |
+
+The [decisions guide](decisions.md) explains admission, safe retries, terminal caching, partial bypass, and the local analytical boundary.

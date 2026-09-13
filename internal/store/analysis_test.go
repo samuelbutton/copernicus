@@ -214,6 +214,10 @@ func TestSchemaFourUpgradePreservesPublishedResults(t *testing.T) {
 	if _, err := raw.Exec(schema + requestsSchema + outboxSchema + resultsSchema); err != nil {
 		t.Fatal(err)
 	}
+	// Install temporary admission tables only while constructing legacy fixture data.
+	if _, err := raw.Exec(admissionSchema + "INSERT INTO team_budgets VALUES('local',10000000);"); err != nil {
+		t.Fatal(err)
+	}
 	old := &Store{db: raw}
 	if err := old.Import(ctx, example(t)); err != nil {
 		t.Fatal(err)
@@ -228,6 +232,9 @@ func TestSchemaFourUpgradePreservesPublishedResults(t *testing.T) {
 	}
 	var body, hash string
 	if err := raw.QueryRow("SELECT content,content_hash FROM outbox").Scan(&body, &hash); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec("DROP TABLE budget_reservations; DROP TABLE team_budgets; DROP TABLE saved_comparisons; PRAGMA user_version=4;"); err != nil {
 		t.Fatal(err)
 	}
 	if err := raw.Close(); err != nil {

@@ -27,6 +27,7 @@ var ErrInvalidSubmission = errors.New("invalid request selection")
 var ErrIdentityConflict = errors.New("request identifier already has a different submission")
 
 type Submission struct {
+	TeamID       string   `json:"team_id,omitempty"`
 	ID           string   `json:"id"`
 	SuiteIDs     []string `json:"suite_ids,omitempty"`
 	CollectionID string   `json:"collection_id"`
@@ -38,6 +39,11 @@ type Submission struct {
 }
 
 func (s Submission) Validate() error {
+	if s.TeamID != "" {
+		if err := catalog.ValidateID(s.TeamID); err != nil {
+			return err
+		}
+	}
 	for _, id := range []string{s.ID, s.CollectionID, s.ControllerID, s.Requester} {
 		if err := catalog.ValidateID(id); err != nil {
 			return err

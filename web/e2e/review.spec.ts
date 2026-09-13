@@ -585,3 +585,162 @@ test("new scoring versions preserve recordings and restore explicit comparisons"
     page.getByText(/3 total groups: 2 compared, 1 incomplete/),
   ).toBeVisible();
 });
+
+test("team admission and saved comparison views remain repeat-safe", async ({
+  page,
+  app,
+}, testInfo) => {
+  await run(cli, [
+    "budget",
+    "set",
+    "--db",
+    app.db,
+    "--team",
+    "small",
+    "--ticks",
+    "199",
+  ]);
+  await page.goto(`${app.url}#view=create`);
+  await page.getByLabel("Request name").fill("limited-review");
+  await page.getByLabel("Team budget").selectOption("small");
+  await page.getByLabel("Test collection").selectOption("all-tests");
+  await page.getByRole("checkbox", { name: /^smoke/ }).check();
+  await page.getByLabel("Braking rule").selectOption("baseline");
+  await page
+    .getByRole("button", { name: "Create request", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "exceeds the team’s remaining simulation ticks",
+  );
+  await expect(page.getByLabel("Request name")).toHaveValue("limited-review");
+  const empty = JSON.parse(
+    (await run(cli, ["outbox", "show", "--db", app.db])).stdout,
+  ) as unknown;
+  expect(JSON.stringify(empty)).not.toContain("limited-review");
+  await accessible(page);
+  await run(cli, [
+    "budget",
+    "set",
+    "--db",
+    app.db,
+    "--team",
+    "small",
+    "--ticks",
+    "200",
+  ]);
+  await page
+    .getByRole("button", { name: "Create request", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "limited-review", exact: true }),
+  ).toBeVisible();
+  const retry = await page.request.post(`${app.url}/api/requests`, {
+    headers: { Origin: app.url, "X-Copernicus-Request": "1" },
+    data: {
+      id: "limited-review",
+      team_id: "small",
+      collection_id: "all-tests",
+      controller_id: "baseline",
+      suite_ids: ["smoke"],
+      seed: 0,
+      repeat: 0,
+      priority: 1,
+      requester: "reviewer",
+    },
+  });
+  expect(retry.ok()).toBe(true);
+  const budgetSchema = z.array(
+    z.object({
+      team_id: z.string(),
+      reserved_ticks: z.number(),
+      remaining_ticks: z.number(),
+    }),
+  );
+  const budgets = budgetSchema.parse(
+    JSON.parse(
+      (await run(cli, ["budget", "show", "--db", app.db])).stdout,
+    ) as unknown,
+  );
+  expect(budgets.find((b) => b.team_id === "small")).toMatchObject({
+    reserved_ticks: 200,
+    remaining_ticks: 0,
+  });
+  await create(page, "cache-baseline", "baseline");
+  await create(page, "cache-candidate", "candidate");
+  const url = `${app.url}#view=compare&baseline=cache-baseline&candidate=cache-candidate`;
+  await page.goto(url);
+  await expect(
+    page.getByText(/Live comparison: some selected tests are incomplete/),
+  ).toBeVisible();
+  await app.processJobs();
+  await expect(
+    page.getByText(/Saved comparison reused|Comparison saved for these inputs/),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(/Saved comparison reused/)).toBeVisible();
+  await page.getByLabel("Show groups").selectOption("regressions");
+  await page.getByLabel("Group order").selectOption("id-desc");
+  await page.getByRole("button", { name: "Compare requests" }).click();
+  await expect(page.getByText(/1 groups on this page · 1 match/)).toBeVisible();
+  await expect(page.getByText(/2 total groups: 2 compared/)).toBeVisible();
+  await accessible(page);
+  await page.screenshot({
+    path: testInfo.outputPath("saved-comparison.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("link", { name: "Candidate: stopped-obstacle", exact: true })
+    .click();
+  await page.getByRole("link", { name: "Back to comparison" }).click();
+  await expect(page.getByLabel("Show groups")).toHaveValue("regressions");
+  await expect(page.getByLabel("Group order")).toHaveValue("id-desc");
+  // Pages, sort and filters each have separate cache identities.
+  const schema = z.object({
+    rows: z.array(z.object({ id: z.string() })),
+    counts: z.object({ rows: z.number() }),
+    view: z.object({
+      cache_state: z.string(),
+      cache_key: z.string(),
+      next_after: z.string().optional(),
+    }),
+  });
+  const compare = async (args: string[]) =>
+    schema.parse(
+      JSON.parse(
+        (
+          await run(cli, [
+            "compare",
+            "--db",
+            app.db,
+            "--baseline",
+            "cache-baseline",
+            "--candidate",
+            "cache-candidate",
+            "--save",
+            "--duckdb",
+            join(root, "bin/duckdb"),
+            "--limit",
+            "1",
+            ...args,
+          ])
+        ).stdout,
+      ) as unknown,
+    );
+  const first = await compare([]);
+  const second = await compare(["--after", first.view.next_after ?? ""]);
+  expect(first.rows).toHaveLength(1);
+  expect(second.rows).toHaveLength(1);
+  expect(first.rows[0]?.id).not.toBe(second.rows[0]?.id);
+  expect(first.view.cache_key).not.toBe(second.view.cache_key);
+  expect(first.counts.rows).toBe(2);
+  expect(second.counts.rows).toBe(2);
+  const hit = await compare(["--duckdb", "/unavailable-query-engine"]);
+  expect(hit.view.cache_state).toBe("hit");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await accessible(page);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
