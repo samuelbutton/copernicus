@@ -56,7 +56,7 @@ func TestReadOnlyAPIAndLocalBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler := Handler(db, "127.0.0.1:8080")
+	handler := Handler(db, "127.0.0.1:8080", "../../bin/duckdb")
 	for _, tt := range []struct {
 		path   string
 		status int
@@ -65,6 +65,11 @@ func TestReadOnlyAPIAndLocalBoundary(t *testing.T) {
 		{"/api/requests/review-one", 200}, {"/api/requests/review-two/status", 200}, {"/api/requests/unknown/status", 404},
 		{"/api/requests/INVALID/status", 400}, {"/api/results", 200}, {"/api/index", 200}, {"/unknown", 404},
 		{"/api/results?limit=101", 400}, {"/api/results?limit=0", 400}, {"/api/results?limit=1&limit=2", 400}, {"/api/results?wrong=1", 400}, {"/api/results?limit=1;ignored=2", 400},
+		{"/api/comparisons?baseline=review-one&candidate=review-two&limit=1", 200},
+		{"/api/comparisons?baseline=review-one&candidate=unknown", 404},
+		{"/api/comparisons?baseline=review-one", 400},
+		{"/api/comparisons?baseline=review-one&candidate=review-two&duckdb=other", 400},
+		{"/api/comparisons?baseline=review-one&candidate=review-two&limit=0", 400},
 	} {
 		req := httptest.NewRequest("GET", "http://127.0.0.1:8080"+tt.path, nil)
 		response := httptest.NewRecorder()
@@ -85,6 +90,11 @@ func TestReadOnlyAPIAndLocalBoundary(t *testing.T) {
 			}
 			if progress.RequestID != "review-two" || progress.Total != 3 || progress.Completed != 0 || progress.Complete {
 				t.Fatal("wrong request denominator")
+			}
+		}
+		if tt.path == "/api/comparisons?baseline=review-one&candidate=review-two&limit=1" {
+			if !strings.Contains(response.Body.String(), `"rows":3`) || !strings.Contains(response.Body.String(), `"incomplete":3`) || !strings.Contains(response.Body.String(), `"next_after"`) {
+				t.Fatal("comparison pagination lost full denominators")
 			}
 		}
 	}

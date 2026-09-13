@@ -20,6 +20,9 @@ Some terms describe the planned review workflow; the README states which behavio
 | Contract | Versioned rules for files exchanged between independent programs. |
 | Correlation identifier | A request label carried through related public files. |
 | Controller | A rule that selects acceleration or braking during a simulation. |
+| Delta | The candidate metric value minus the baseline value in the same unit. |
+| Denominator | The total number of selected items against which a count is interpreted. |
+| DuckDB | The local SQL query engine used to compare published metric data. |
 | Exchange directory | A local directory containing public job, event, recording, and result files. |
 | Event | An immutable notice describing one observed execution transition. |
 | Execution | One identified simulation run. |
@@ -29,11 +32,13 @@ Some terms describe the planned review workflow; the README states which behavio
 | Job | Complete instructions for an identified run or analysis operation. |
 | HTTP API | Local URLs that return structured data for another program to read. |
 | Index | Derived records that locate validated published results. |
+| Incomparable | A matched group whose pairing or scoring rules do not permit metric deltas. |
 | JSON | A text format for structured data. |
 | Mebibyte | A unit containing 1,048,576 bytes. |
 | Membership | A test’s position in a suite, or a suite’s position in a collection. |
 | Millimeter | One thousandth of a meter. |
 | Millisecond | One thousandth of a second. |
+| Matching key | Frozen fields that identify comparable test selections independently of the controller. |
 | Loopback address | An address that accepts connections from the same computer. |
 | Metric | A named calculation used to score a recording. |
 | Node.js | The runtime used by the web build tools. |

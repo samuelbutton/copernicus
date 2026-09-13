@@ -33,6 +33,12 @@ The command imports validated results and serves read-only request progress.
 | [internal/httpapi/api.go](../internal/httpapi/api.go) | Exposes bounded read-only JSON routes with local-origin checks. |
 | [cmd/copernicus/serve.go](../cmd/copernicus/serve.go) | Owns loopback binding, HTTP timeouts, and graceful shutdown. |
 | [cmd/copernicus/results.go](../cmd/copernicus/results.go) | Imports, lists, and rebuilds the result index. |
+| [internal/comparison/model.go](../internal/comparison/model.go) | Pairs frozen selections and preserves complete denominators. |
+| [internal/comparison/deltas.sql](../internal/comparison/deltas.sql) | Queries compatible metric values, pass flags, and deltas in DuckDB. |
+| [internal/comparison/duckdb.go](../internal/comparison/duckdb.go) | Restricts the query process to private copies of validated results. |
+| [internal/store/comparisons.go](../internal/store/comparisons.go) | Reads frozen selections and validates their exact selected outcomes. |
+| [cmd/copernicus/compare.go](../cmd/copernicus/compare.go) | Runs the read-only comparison command. |
+| [scripts/install-duckdb.sh](../scripts/install-duckdb.sh) | Installs the pinned executable after verifying its archive checksum. |
 | [cmd/copernicus/outbox.go](../cmd/copernicus/outbox.go) | Inspects delivery state and runs a bounded publication batch. |
 | [cmd/copernicus/requests.go](../cmd/copernicus/requests.go) | Creates and reads saved requests. |
 | [compatibility/source.go](../compatibility/source.go) | Embeds the execution source record for independent CLI use. |
@@ -64,3 +70,6 @@ The [exchange guide](exchange.md) maps request fields to jobs and demonstrates r
 The [outbox tests](../internal/store/outbox_test.go) exercise process exits across the transaction and publication boundary.
 
 The [lifecycle guide](lifecycle.md) explains result validation, completion counts, replay, and index recovery.
+
+The [comparison guide](comparisons.md) explains matching, metric deltas, unavailable values, and direct SQL inspection.
+The [comparison tests](../internal/comparison/comparison_test.go) cover equal values, regressions, content conflicts, metric conflicts, ambiguity, and denominators.

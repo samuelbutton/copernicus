@@ -51,9 +51,13 @@ func writeDocument(t *testing.T, path string, value any) []byte {
 // mappedOutcome constructs synthetic contract-valid output for an accepted job.
 // Separate CLI integration checks use real engine-produced results.
 func mappedOutcome(t *testing.T, s *Store, root string) (string, string) {
+	return mappedOutcomeForRequest(t, s, root, "")
+}
+
+func mappedOutcomeForRequest(t *testing.T, s *Store, root, requestID string) (string, string) {
 	t.Helper()
 	var body string
-	if err := s.db.QueryRow("SELECT content FROM outbox ORDER BY sequence LIMIT 1").Scan(&body); err != nil {
+	if err := s.db.QueryRow("SELECT content FROM outbox WHERE (?='' OR request_id=?) ORDER BY sequence LIMIT 1", requestID, requestID).Scan(&body); err != nil {
 		t.Fatal(err)
 	}
 	job, err := compatibility.ParseJob([]byte(body))

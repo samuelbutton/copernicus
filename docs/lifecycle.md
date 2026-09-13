@@ -154,6 +154,7 @@ Pass that cursor as the URL-encoded `after` parameter to read the next page.
 | `/api/requests/{id}/status` | Completion counts and per-execution states. |
 | `/api/results` | Paged result references, assignment, and current availability. |
 | `/api/index` | Stored event, result, and unassigned-result counts. |
+| `/api/comparisons` | [Request comparisons](comparisons.md#read-a-comparison-through-http), with explicit baseline and candidate identifiers. |
 
 The API accepts GET requests only and opens SQLite in read-only mode.
 It binds only `127.0.0.1`, rejects foreign Host or Origin values, and grants no cross-origin access.

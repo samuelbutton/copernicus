@@ -2,7 +2,10 @@ GO ?= go
 NPM ?= npm
 export GOWORK := off
 
-.PHONY: build build-cli build-web test check fmt preview clean
+.PHONY: build build-cli build-web test check fmt preview clean install-duckdb
+
+install-duckdb:
+	sh scripts/install-duckdb.sh
 
 build: build-cli build-web
 

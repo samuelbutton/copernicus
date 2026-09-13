@@ -27,7 +27,8 @@ Usage:
   copernicus results import --db PATH --exchange-dir PATH [events/FILE.json results/FILE.json ...]
   copernicus results rebuild --db PATH --exchange-dir PATH
   copernicus results show --db PATH [--after CURSOR] [--limit 1..100]
-  copernicus serve --db PATH [--port PORT]
+  copernicus compare --db PATH --baseline ID --candidate ID [--duckdb PATH]
+  copernicus serve --db PATH [--port PORT] [--duckdb PATH]
   copernicus outbox show --db PATH
   copernicus outbox publish --db PATH --exchange-dir PATH [--limit 1..1000]
 
@@ -38,6 +39,7 @@ Requests freeze inputs and save compatible jobs in a durable outbox.
 Outbox publication delivers job files. Run it again to resume pending delivery.
 Publication does not start workers or import results.
 Result import validates public files and records repeat-safe progress.
+Compare reads selected outcomes through DuckDB; its default path is bin/duckdb.
 Serve exposes a read-only HTTP API on 127.0.0.1.
 See docs/lifecycle.md for completion checks and index recovery.
 `
@@ -60,6 +62,11 @@ func run(ctx context.Context, args []string, output io.Writer) error {
 	}
 	if args[0] == "serve" {
 		return runServe(ctx, args[1:], output)
+	}
+	if args[0] == "compare" {
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		return runCompare(ctx, args[1:], output)
 	}
 	if len(args) < 2 || (args[0] != "catalog" && args[0] != "request" && args[0] != "outbox" && args[0] != "results") {
 		return errors.New("unsupported arguments; use copernicus --help")

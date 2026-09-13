@@ -17,8 +17,9 @@ import (
 
 // Handler accepts only the actual loopback authority. It grants no cross-origin
 // access, accepts no mutations, and limits concurrent expensive file validation.
-func Handler(db *store.Store, authority string) http.Handler {
+func Handler(db *store.Store, authority, duckdb string) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/api/comparisons", comparisonHandler(db, duckdb))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { send(w, map[string]string{"status": "live"}, nil) })
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		_, err := db.IndexStatus(r.Context())

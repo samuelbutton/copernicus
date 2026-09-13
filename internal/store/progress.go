@@ -41,6 +41,10 @@ type RequestProgress struct {
 // Progress reads one consistent database view, then revalidates referenced files
 // outside the transaction. A missing or changed file cannot remain a cached pass.
 func (s *Store) Progress(ctx context.Context, id string) (RequestProgress, error) {
+	return s.progress(ctx, id, nil)
+}
+
+func (s *Store) progress(ctx context.Context, id string, accept func(exchange.ResultFile) error) (RequestProgress, error) {
 	out := RequestProgress{RequestID: id, Executions: []ExecutionProgress{}}
 	if err := catalog.ValidateID(id); err != nil {
 		return out, err
@@ -113,6 +117,11 @@ func (s *Store) Progress(ctx context.Context, id string) (RequestProgress, error
 						p.Reason = *r.FailureClass
 					}
 					p.Result = &ResultReference{Path: file.path, SHA256: file.fileHash, AnalysisID: r.AnalysisID}
+					if accept != nil {
+						if err := accept(*o.Result); err != nil {
+							return RequestProgress{}, err
+						}
+					}
 				}
 			}
 		}

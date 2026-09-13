@@ -14,6 +14,7 @@ Delivery can resume after an interruption.
 
 You can load published results and check how many tests have finished.
 Missing files remain incomplete, and failed tests stay visible.
+You can compare two saved requests to see which measurements improved or became worse.
 
 ## Technical summary
 
@@ -32,6 +33,7 @@ Publication does not start workers or import results.
 
 The result importer validates published files and maps exact accepted jobs back to requests.
 A read-only local HTTP API exposes snapshots, progress, and the result index.
+DuckDB queries selected result files for compatible comparisons, with explicit missing and unmatched rows.
 
 ## Build and read the command help
 
@@ -47,11 +49,13 @@ go mod download
 cd web
 npm ci --ignore-scripts
 cd ..
+make install-duckdb
 ```
 
 Installation downloads public dependencies into `web/node_modules/` and the npm cache.
 The Go command uses the pure-Go SQLite driver pinned in [go.mod](go.mod).
 Go downloads its dependencies into the module cache; no C compiler is required.
+The [comparison setup](docs/comparisons.md#install-the-query-tool) installs the pinned DuckDB executable using `curl`, `gzip`, and a SHA-256 tool.
 Keep installed dependencies for subsequent builds.
 After installation, builds and command help need no internet access.
 
@@ -88,6 +92,11 @@ The guide explains delivery status, conflicts, the pinned contract, and optional
 
 Follow the [lifecycle walkthrough](docs/lifecycle.md) to import results, inspect completion, rebuild the index, and use the local HTTP API.
 The first procedure uses copied contract examples and requires no execution service.
+
+## Compare saved requests
+
+Follow the [comparison walkthrough](docs/comparisons.md) to inspect deltas, changed membership, completion counts, and the comparison API.
+It includes a direct DuckDB query and cleanup commands.
 
 ## Open the browser introduction
 
@@ -130,7 +139,7 @@ To remove installed web dependencies separately, run `rm -rf web/node_modules` f
 Start with the [code tour](docs/code-tour.md), [glossary](docs/glossary.md), and [contribution guide](CONTRIBUTING.md).
 The [writing guide](docs/writing.md) defines the public documentation and naming rules.
 The command stores frozen requests; the browser introduction remains static.
-Request comparisons and the interactive review interface belong to later work.
+The interactive review interface belongs to later work.
 
 ## License
 
