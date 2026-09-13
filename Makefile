@@ -13,17 +13,17 @@ build-web:
 	cd web && $(NPM) run build
 
 test:
-	$(GO) test ./cmd/... ./internal/...
+	$(GO) test ./cmd/... ./internal/... ./compatibility/...
 
 check:
-	@test -z "$$(gofmt -l cmd internal)" || { gofmt -l cmd internal; exit 1; }
+	@test -z "$$(gofmt -l cmd internal compatibility)" || { gofmt -l cmd internal compatibility; exit 1; }
 	$(MAKE) test
-	$(GO) vet ./cmd/... ./internal/...
+	$(GO) vet ./cmd/... ./internal/... ./compatibility/...
 	cd web && $(NPM) run check
 	$(MAKE) build
 
 fmt:
-	gofmt -w cmd internal
+	gofmt -w cmd internal compatibility
 	cd web && $(NPM) run format
 
 preview: build-web

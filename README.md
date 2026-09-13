@@ -8,12 +8,14 @@ The project will help a reviewer compare what happened and trace each result bac
 
 You can import test definitions, organize them into groups, and inspect which tests a collection selects.
 A browser introduction explains the driving example.
-This version does not create requests, start driving simulations, or load results yet.
+You can save a request that preserves the selected instructions, even after a group changes.
+This version does not start driving simulations or load results yet.
 
 ## Technical summary
 
 Copernicus separates test selection and review from simulation execution.
 The Go command imports validated test catalogs into SQLite and expands collections into ordered, unique tests.
+Request creation freezes those selections and their content hashes in one transaction.
 Help and catalog inspection start no background services.
 The React and TypeScript package builds a static introduction with Vite.
 Both packages build independently and require no other checkout.
@@ -63,6 +65,11 @@ Follow the [test-model walkthrough](docs/test-model.md#import-and-inspect-the-ex
 It includes the empty-lane, stopped-obstacle, and moving-obstacle scenarios, plus baseline and candidate controller references.
 The walkthrough creates a temporary database and includes cleanup commands.
 
+## Freeze a request
+
+Follow the [request walkthrough](docs/requests.md#create-a-request-and-change-a-suite) to save inputs, edit a suite, and verify the unchanged snapshot.
+The guide also covers repeat-safe submissions, incompatible tests, and cleanup.
+
 ## Open the browser introduction
 
 Prerequisites: the installed web dependencies above and a modern browser.
@@ -103,7 +110,8 @@ To remove installed web dependencies separately, run `rm -rf web/node_modules` f
 
 Start with the [code tour](docs/code-tour.md), [glossary](docs/glossary.md), and [contribution guide](CONTRIBUTING.md).
 The [writing guide](docs/writing.md) defines the public documentation and naming rules.
-The command and browser introduction contain no request store, result importer, or comparison engine yet.
+The command stores frozen requests; the browser introduction remains static.
+Result import and comparison belong to later work.
 
 ## License
 

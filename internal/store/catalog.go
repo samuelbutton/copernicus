@@ -1,4 +1,5 @@
-package catalog
+// Package store owns the local catalog and request database.
+package store
 
 import (
 	"context"
@@ -11,11 +12,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/samuelbutton/copernicus/internal/catalog"
+
 	_ "modernc.org/sqlite"
 )
 
 //go:embed schema.sql
 var schema string
+
+//go:embed requests-v2.sql
+var requestsSchema string
 
 const applicationID = 1129333588
 
@@ -89,7 +95,12 @@ func (s *Store) initialize(ctx context.Context, create bool) error {
 	if err := tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		return fmt.Errorf("read catalog version: %w", err)
 	}
-	if app == applicationID && version == 1 {
+	if app == applicationID && (version == 1 || version == 2) {
+		if create && version == 1 {
+			if _, err := tx.ExecContext(ctx, requestsSchema); err != nil {
+				return fmt.Errorf("upgrade request schema: %w", err)
+			}
+		}
 		return tx.Commit()
 	}
 	if !create || app != 0 || version != 0 {
@@ -102,7 +113,7 @@ func (s *Store) initialize(ctx context.Context, create bool) error {
 	if count != 0 {
 		return errors.New("refusing to initialize a nonempty database")
 	}
-	if _, err := tx.ExecContext(ctx, schema); err != nil {
+	if _, err := tx.ExecContext(ctx, schema+"\n"+requestsSchema); err != nil {
 		return fmt.Errorf("create catalog schema: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -113,7 +124,7 @@ func (s *Store) initialize(ctx context.Context, create bool) error {
 
 // Import adds a complete batch in one transaction. Repeated identifiers are
 // errors, including unchanged definitions. A failed batch leaves all records intact.
-func (s *Store) Import(ctx context.Context, c Catalog) error {
+func (s *Store) Import(ctx context.Context, c catalog.Catalog) error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
@@ -122,16 +133,16 @@ func (s *Store) Import(ctx context.Context, c Catalog) error {
 		return fmt.Errorf("begin import: %w", err)
 	}
 	defer tx.Rollback()
-	if err := insertDefinitions(ctx, tx, "scenarios", c.Scenarios, func(v Scenario) string { return v.ID }); err != nil {
+	if err := insertDefinitions(ctx, tx, "scenarios", c.Scenarios, func(v catalog.Scenario) string { return v.ID }); err != nil {
 		return err
 	}
-	if err := insertDefinitions(ctx, tx, "controllers", c.Controllers, func(v Controller) string { return v.ID }); err != nil {
+	if err := insertDefinitions(ctx, tx, "controllers", c.Controllers, func(v catalog.Controller) string { return v.ID }); err != nil {
 		return err
 	}
-	if err := insertDefinitions(ctx, tx, "run_templates", c.RunTemplates, func(v RunTemplate) string { return v.ID }); err != nil {
+	if err := insertDefinitions(ctx, tx, "run_templates", c.RunTemplates, func(v catalog.RunTemplate) string { return v.ID }); err != nil {
 		return err
 	}
-	if err := insertDefinitions(ctx, tx, "analysis_templates", c.AnalysisTemplates, func(v AnalysisTemplate) string { return v.ID }); err != nil {
+	if err := insertDefinitions(ctx, tx, "analysis_templates", c.AnalysisTemplates, func(v catalog.AnalysisTemplate) string { return v.ID }); err != nil {
 		return err
 	}
 	for _, v := range c.Tests {
@@ -185,38 +196,50 @@ func insertDefinitions[T any](ctx context.Context, tx *sql.Tx, table string, val
 
 // Read returns a consistent catalog with definitions sorted by identifier and
 // membership arrays in their original order.
-func (s *Store) Read(ctx context.Context) (Catalog, error) {
-	c := emptyCatalog()
-	c.Version = 1
+func (s *Store) Read(ctx context.Context) (catalog.Catalog, error) {
+	c := catalog.Catalog{Version: 1}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return c, fmt.Errorf("begin catalog read: %w", err)
 	}
 	defer tx.Rollback()
+	c, err = readCatalog(ctx, tx)
+	if err != nil {
+		return c, err
+	}
+	if err := tx.Commit(); err != nil {
+		return c, fmt.Errorf("finish catalog read: %w", err)
+	}
+	return c, nil
+}
+
+func readCatalog(ctx context.Context, tx *sql.Tx) (catalog.Catalog, error) {
+	c := catalog.Catalog{Version: 1}
+	var err error
 	if err := checkStoreLimits(ctx, tx); err != nil {
 		return c, err
 	}
-	if c.Scenarios, err = readDefinitions[Scenario](ctx, tx, "scenarios"); err != nil {
+	if c.Scenarios, err = readDefinitions[catalog.Scenario](ctx, tx, "scenarios"); err != nil {
 		return c, err
 	}
-	if c.Controllers, err = readDefinitions[Controller](ctx, tx, "controllers"); err != nil {
+	if c.Controllers, err = readDefinitions[catalog.Controller](ctx, tx, "controllers"); err != nil {
 		return c, err
 	}
-	if c.RunTemplates, err = readDefinitions[RunTemplate](ctx, tx, "run_templates"); err != nil {
+	if c.RunTemplates, err = readDefinitions[catalog.RunTemplate](ctx, tx, "run_templates"); err != nil {
 		return c, err
 	}
-	if c.AnalysisTemplates, err = readDefinitions[AnalysisTemplate](ctx, tx, "analysis_templates"); err != nil {
+	if c.AnalysisTemplates, err = readDefinitions[catalog.AnalysisTemplate](ctx, tx, "analysis_templates"); err != nil {
 		return c, err
 	}
-	c.Tests = []Test{}
-	c.Suites = []Suite{}
-	c.Collections = []Collection{}
-	rows, err := tx.QueryContext(ctx, "SELECT id, scenario_id, run_template_id, analysis_template_id FROM tests ORDER BY id LIMIT ?", MaxEntries+1)
+	c.Tests = []catalog.Test{}
+	c.Suites = []catalog.Suite{}
+	c.Collections = []catalog.Collection{}
+	rows, err := tx.QueryContext(ctx, "SELECT id, scenario_id, run_template_id, analysis_template_id FROM tests ORDER BY id LIMIT ?", catalog.MaxEntries+1)
 	if err != nil {
 		return c, fmt.Errorf("read tests: %w", err)
 	}
 	for rows.Next() {
-		var v Test
+		var v catalog.Test
 		if err := rows.Scan(&v.ID, &v.ScenarioID, &v.RunTemplateID, &v.AnalysisTemplateID); err != nil {
 			rows.Close()
 			return c, err
@@ -227,7 +250,7 @@ func (s *Store) Read(ctx context.Context) (Catalog, error) {
 		return c, err
 	}
 	for _, table := range []string{"suites", "collections"} {
-		rows, err := tx.QueryContext(ctx, "SELECT id FROM "+table+" ORDER BY id LIMIT ?", MaxEntries+1)
+		rows, err := tx.QueryContext(ctx, "SELECT id FROM "+table+" ORDER BY id LIMIT ?", catalog.MaxEntries+1)
 		if err != nil {
 			return c, err
 		}
@@ -238,9 +261,9 @@ func (s *Store) Read(ctx context.Context) (Catalog, error) {
 				return c, err
 			}
 			if table == "suites" {
-				c.Suites = append(c.Suites, Suite{ID: id, TestIDs: []string{}})
+				c.Suites = append(c.Suites, catalog.Suite{ID: id, TestIDs: []string{}})
 			} else {
-				c.Collections = append(c.Collections, Collection{ID: id, SuiteIDs: []string{}})
+				c.Collections = append(c.Collections, catalog.Collection{ID: id, SuiteIDs: []string{}})
 			}
 		}
 		if err := finishRows(rows); err != nil {
@@ -257,9 +280,6 @@ func (s *Store) Read(ctx context.Context) (Catalog, error) {
 			return c, err
 		}
 	}
-	if err := tx.Commit(); err != nil {
-		return c, fmt.Errorf("finish catalog read: %w", err)
-	}
 	// An initialized, empty catalog is valid to inspect before its first import.
 	if len(c.Scenarios)+len(c.Controllers)+len(c.RunTemplates)+len(c.AnalysisTemplates)+len(c.Tests)+len(c.Suites)+len(c.Collections) > 0 {
 		if err := c.Validate(); err != nil {
@@ -271,7 +291,7 @@ func (s *Store) Read(ctx context.Context) (Catalog, error) {
 
 func readDefinitions[T any](ctx context.Context, tx *sql.Tx, table string) ([]T, error) {
 	values := []T{}
-	rows, err := tx.QueryContext(ctx, "SELECT content FROM "+table+" ORDER BY id LIMIT ?", MaxEntries+1)
+	rows, err := tx.QueryContext(ctx, "SELECT content FROM "+table+" ORDER BY id LIMIT ?", catalog.MaxEntries+1)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", table, err)
 	}
@@ -291,7 +311,7 @@ func readDefinitions[T any](ctx context.Context, tx *sql.Tx, table string) ([]T,
 }
 func readMembers(ctx context.Context, tx *sql.Tx, query, id string) ([]string, error) {
 	ids := []string{}
-	rows, err := tx.QueryContext(ctx, query, id, MaxEntries+1)
+	rows, err := tx.QueryContext(ctx, query, id, catalog.MaxEntries+1)
 	if err != nil {
 		return nil, err
 	}
@@ -323,8 +343,8 @@ func checkStoreLimits(ctx context.Context, tx *sql.Tx) error {
 		}
 		size += bytes
 	}
-	if total > MaxEntries || size > MaxStoredBytes {
-		return fmt.Errorf("catalog exceeds %d records and memberships or %d content bytes", MaxEntries, MaxStoredBytes)
+	if total > catalog.MaxEntries || size > catalog.MaxStoredBytes {
+		return fmt.Errorf("catalog exceeds %d records and memberships or %d content bytes", catalog.MaxEntries, catalog.MaxStoredBytes)
 	}
 	return nil
 }

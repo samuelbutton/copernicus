@@ -36,6 +36,9 @@ Some terms describe the planned review workflow; the README states which behavio
 | Request | A saved selection of tests and a controller build. |
 | Run template | Simulator settings, limits, and accepted scenario type. |
 | Scenario | The initial vehicle state, goal, and obstacle behavior. |
+| Resolution | Checking a selection and copying its complete inputs into a request. |
+| SHA-256 | The hash algorithm used to identify frozen JSON content. |
+| Submission identity | A request identifier paired with the command fields accepted for that request. |
 | Snapshot | An immutable copy of resolved request inputs. |
 | SQLite | The embedded database that stores the local catalog. |
 | Transaction | A group of database changes accepted together or rolled back together. |

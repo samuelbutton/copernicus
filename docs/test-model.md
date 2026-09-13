@@ -4,6 +4,7 @@ A test combines a scenario, a run template, and an analysis template.
 A suite orders tests.
 A collection orders suites.
 The catalog stores these definitions before a reviewer creates a request.
+The [request guide](requests.md) explains frozen inputs and later suite edits.
 
 ```mermaid
 flowchart TD
@@ -114,16 +115,18 @@ The database checks references inside the transaction.
 A missing reference rejects the entire batch, including definitions inserted earlier in that transaction.
 Imports add records; they do not replace existing definitions.
 Use new identifiers for revised definitions in this version.
+The [suite-edit command](requests.md#create-a-request-and-change-a-suite) can change an existing suite’s membership without replacing test definitions.
 
 Catalog validation checks definition values and relationships.
 It does not verify that an execution engine supports every named implementation or that a scenario matches a selected run template.
-Request resolution and the execution adapter will perform those checks before dispatch.
+[Request resolution](requests.md#resolution-and-persistence) checks the pinned example before saving execution readiness.
+The future execution adapter will also validate complete jobs before dispatch.
 Importing or expanding a catalog never starts a simulation, creates a request, or calculates a score.
 
 ## Storage and failure behavior
 
-The [SQLite schema](../internal/catalog/schema.sql) owns identifiers, foreign keys, and membership positions.
-The [store](../internal/catalog/store.go) commits each import in one transaction.
+The [SQLite schema](../internal/store/schema.sql) owns identifiers, foreign keys, and membership positions.
+The [store](../internal/store/catalog.go) commits each import in one transaction.
 Concurrent imports cannot accept the same identifier twice.
 A process exit before commit leaves no accepted partial batch.
 
@@ -147,6 +150,7 @@ No background worker, automatic retry loop, or external service is involved.
 
 ## Read the implementation
 
-[Validation and JSON tests](../internal/catalog/catalog_test.go) cover malformed input, duplicate identifiers, persistence, ordering, rollback, concurrency, and process exit.
+[Validation and JSON tests](../internal/catalog/catalog_test.go) cover malformed input and duplicate identifiers.
+[Catalog store tests](../internal/store/catalog_test.go) cover persistence, ordering, rollback, concurrency, and process exit.
 [Command tests](../cmd/copernicus/catalog_test.go) cover help, argument errors, imports, inspection, expansion, and failed confirmation output.
 The [expansion function](../internal/catalog/expand.go) contains only collection traversal and first-occurrence selection.

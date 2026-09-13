@@ -8,24 +8,30 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/samuelbutton/copernicus/internal/catalog"
+	catalogstore "github.com/samuelbutton/copernicus/internal/store"
 )
 
 func runCatalog(ctx context.Context, args []string, output io.Writer) (err error) {
 	command := args[0]
-	if command != "import" && command != "show" && command != "expand" {
+	if command != "import" && command != "show" && command != "expand" && command != "set-suite" {
 		return errors.New("unknown catalog command; use copernicus --help")
 	}
 	flags := flag.NewFlagSet("catalog "+command, flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	dbPath := flags.String("db", "", "catalog database path")
-	var file, id string
+	var file, id, tests string
 	if command == "import" {
 		flags.StringVar(&file, "file", "", "catalog JSON path")
 	}
 	if command == "expand" {
 		flags.StringVar(&id, "collection", "", "collection identifier")
+	}
+	if command == "set-suite" {
+		flags.StringVar(&id, "suite", "", "suite identifier")
+		flags.StringVar(&tests, "tests", "", "ordered comma-separated test identifiers; empty clears membership")
 	}
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -52,7 +58,29 @@ func runCatalog(ctx context.Context, args []string, output io.Writer) (err error
 			return err
 		}
 	}
-	store, err := catalog.Open(ctx, *dbPath, command == "import")
+	var suite catalog.Suite
+	if command == "set-suite" {
+		supplied := false
+		flags.Visit(func(f *flag.Flag) {
+			if f.Name == "tests" {
+				supplied = true
+			}
+		})
+		if !supplied {
+			return errors.New("set-suite requires --tests; use --tests= for an empty suite")
+		}
+		suite = catalog.Suite{ID: id, TestIDs: []string{}}
+		if tests != "" {
+			suite.TestIDs = strings.Split(tests, ",")
+		}
+		if err := (catalog.Catalog{Version: 1, Suites: []catalog.Suite{suite}}).Validate(); err != nil {
+			return err
+		}
+		if _, err := os.Lstat(*dbPath); err != nil {
+			return fmt.Errorf("inspect catalog: %w", err)
+		}
+	}
+	store, err := catalogstore.Open(ctx, *dbPath, command == "import" || command == "set-suite")
 	if err != nil {
 		return err
 	}
@@ -63,6 +91,15 @@ func runCatalog(ctx context.Context, args []string, output io.Writer) (err error
 		}
 		if _, err := io.WriteString(output, "Catalog imported.\n"); err != nil {
 			return fmt.Errorf("catalog committed, but confirmation output failed: %w", err)
+		}
+		return nil
+	}
+	if command == "set-suite" {
+		if err := store.ReplaceSuite(ctx, suite); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(output, "Suite updated.\n"); err != nil {
+			return fmt.Errorf("suite committed, but confirmation output failed: %w", err)
 		}
 		return nil
 	}
@@ -78,11 +115,11 @@ func runCatalog(ctx context.Context, args []string, output io.Writer) (err error
 		}
 		return nil
 	}
-	tests, err := stored.Expand(id)
+	expanded, err := stored.Expand(id)
 	if err != nil {
 		return err
 	}
-	if err := encoder.Encode(tests); err != nil {
+	if err := encoder.Encode(expanded); err != nil {
 		return fmt.Errorf("write expanded tests: %w", err)
 	}
 	return nil

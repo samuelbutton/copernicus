@@ -1,7 +1,7 @@
 # Code tour
 
 The first version has two independent entry points: a Go command and a static browser introduction.
-The command manages a SQLite catalog; the browser introduction remains static.
+The command manages a SQLite catalog and frozen requests; the browser introduction remains static.
 Neither entry point reads simulation results.
 
 | Path | Responsibility |
@@ -10,9 +10,16 @@ Neither entry point reads simulation results.
 | [cmd/copernicus/catalog.go](../cmd/copernicus/catalog.go) | Reads an import file and runs catalog commands. |
 | [internal/catalog/model.go](../internal/catalog/model.go) | Defines records and validates their values. |
 | [internal/catalog/json.go](../internal/catalog/json.go) | Rejects oversized or ambiguous JSON input. |
-| [internal/catalog/store.go](../internal/catalog/store.go) | Owns SQLite transactions and consistent catalog reads. |
-| [internal/catalog/schema.sql](../internal/catalog/schema.sql) | Enforces identifiers, references, and ordered memberships. |
+| [internal/store/catalog.go](../internal/store/catalog.go) | Owns SQLite transactions and consistent catalog reads. |
+| [internal/store/schema.sql](../internal/store/schema.sql) | Enforces identifiers, references, and ordered memberships. |
 | [internal/catalog/expand.go](../internal/catalog/expand.go) | Expands a collection with first-occurrence ordering. |
+| [internal/request/resolve.go](../internal/request/resolve.go) | Resolves selected definitions into immutable snapshot content. |
+| [internal/request/model.go](../internal/request/model.go) | Defines submissions, frozen references, and content hashes. |
+| [internal/store/requests.go](../internal/store/requests.go) | Saves requests and executions together, with submission identity checks. |
+| [internal/store/suites.go](../internal/store/suites.go) | Changes existing suite membership in one transaction. |
+| [internal/store/requests-v2.sql](../internal/store/requests-v2.sql) | Adds request tables and snapshot immutability constraints. |
+| [cmd/copernicus/requests.go](../cmd/copernicus/requests.go) | Creates and reads saved requests. |
+| [compatibility/source.go](../compatibility/source.go) | Embeds the execution source record for independent CLI use. |
 | [examples/catalog.json](../examples/catalog.json) | Supplies synthetic definitions for the catalog walkthrough. |
 | [cmd/copernicus/main_test.go](../cmd/copernicus/main_test.go) | Checks help, rejected arguments, and output errors. |
 | [web/index.html](../web/index.html) | Defines the document, initial message, and local asset policy. |
@@ -34,3 +41,5 @@ Its example describes earlier and later braking without pretending to be a saved
 The [README procedure](../README.md#open-the-browser-introduction) explains how to build, open, and stop the preview.
 
 The [test-model guide](test-model.md) explains catalog relationships, validation, failure behavior, and cleanup.
+
+The [request guide](requests.md) demonstrates unchanged snapshots after suite edits and explains submission retries.

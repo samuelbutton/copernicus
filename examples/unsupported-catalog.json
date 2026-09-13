@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "id": "unsupported-scenario",
+      "type": "other",
+      "start_position_mm": 0,
+      "start_speed_mm_s": 10000,
+      "goal_position_mm": 60000,
+      "vehicle_length_mm": 4000,
+      "obstacles": []
+    }
+  ],
+  "tests": [
+    {
+      "id": "unsupported-test",
+      "scenario_id": "unsupported-scenario",
+      "run_template_id": "lane-v1",
+      "analysis_template_id": "standard-v1"
+    }
+  ],
+  "suites": [
+    {
+      "id": "unsupported",
+      "test_ids": [
+        "unsupported-test",
+        "empty-lane"
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "id": "unsupported",
+      "suite_ids": [
+        "unsupported"
+      ]
+    }
+  ]
+}
