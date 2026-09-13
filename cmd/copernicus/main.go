@@ -23,6 +23,11 @@ Usage:
   copernicus request create --db PATH --id ID --collection ID --controller ID --requester ID
                            [--priority 0..3] [--seed N] [--repeat N]
   copernicus request show --db PATH --id ID
+  copernicus request status --db PATH --id ID
+  copernicus results import --db PATH --exchange-dir PATH [events/FILE.json results/FILE.json ...]
+  copernicus results rebuild --db PATH --exchange-dir PATH
+  copernicus results show --db PATH [--after CURSOR] [--limit 1..100]
+  copernicus serve --db PATH [--port PORT]
   copernicus outbox show --db PATH
   copernicus outbox publish --db PATH --exchange-dir PATH [--limit 1..1000]
 
@@ -32,7 +37,9 @@ Help creates no files and starts no services.
 Requests freeze inputs and save compatible jobs in a durable outbox.
 Outbox publication delivers job files. Run it again to resume pending delivery.
 Publication does not start workers or import results.
-See docs/test-model.md, docs/requests.md, and docs/exchange.md for examples and cleanup.
+Result import validates public files and records repeat-safe progress.
+Serve exposes a read-only HTTP API on 127.0.0.1.
+See docs/lifecycle.md for completion checks and index recovery.
 `
 
 func main() {
@@ -51,11 +58,17 @@ func run(ctx context.Context, args []string, output io.Writer) error {
 		}
 		return nil
 	}
-	if len(args) < 2 || (args[0] != "catalog" && args[0] != "request" && args[0] != "outbox") {
+	if args[0] == "serve" {
+		return runServe(ctx, args[1:], output)
+	}
+	if len(args) < 2 || (args[0] != "catalog" && args[0] != "request" && args[0] != "outbox" && args[0] != "results") {
 		return errors.New("unsupported arguments; use copernicus --help")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	if args[0] == "results" {
+		return runResults(ctx, args[1:], output)
+	}
 	if args[0] == "outbox" {
 		return runOutbox(ctx, args[1:], output)
 	}

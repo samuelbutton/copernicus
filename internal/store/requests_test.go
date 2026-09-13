@@ -264,7 +264,7 @@ func TestSchemaOneUpgradePreservesCatalog(t *testing.T) {
 	if err := upgraded.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version != 3 {
+	if version != 4 {
 		t.Fatal("upgrade did not run")
 	}
 	if !reflect.DeepEqual(before, readStore(t, upgraded)) {

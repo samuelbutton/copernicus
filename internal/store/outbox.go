@@ -111,7 +111,7 @@ func (s *Store) bindExchange(ctx context.Context, path string) error {
 		return err
 	}
 	if accepted != path {
-		return errors.New("outbox is bound to a different exchange directory; inspect with outbox show")
+		return errors.New("database is bound to a different exchange directory; inspect with outbox show")
 	}
 	return tx.Commit()
 }

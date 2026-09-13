@@ -17,7 +17,7 @@ import (
 
 func runRequest(ctx context.Context, args []string, output io.Writer) (err error) {
 	command := args[0]
-	if command != "create" && command != "show" {
+	if command != "create" && command != "show" && command != "status" {
 		return errors.New("unknown request command; use copernicus --help")
 	}
 	flags := flag.NewFlagSet("request "+command, flag.ContinueOnError)
@@ -61,6 +61,13 @@ func runRequest(ctx context.Context, args []string, output io.Writer) (err error
 		return err
 	}
 	defer func() { err = errors.Join(err, db.Close()) }()
+	if command == "status" {
+		progress, err := db.Progress(ctx, input.ID)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(output).Encode(progress)
+	}
 	var record request.Record
 	if command == "create" {
 		source, err := compatibility.Yamata()

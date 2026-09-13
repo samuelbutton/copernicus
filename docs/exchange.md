@@ -114,7 +114,9 @@ Its [result](../compatibility/contract/v1/examples/valid/results/run-1.json) ref
 Its [completion event](../compatibility/contract/v1/examples/valid/events/completed-1.json) announces the result.
 These are synthetic contract examples, not results produced by this walkthrough.
 The [adapter test](../internal/adapter/jobs_test.go) reproduces the run example's input hash independently.
-Result import and analysis-only submission belong to later work.
+
+The [lifecycle guide](lifecycle.md) covers result import.
+Analysis-only submission belongs to later work.
 
 ## Optional handoff to Yamata
 
@@ -138,7 +140,8 @@ Validation prints `Contract valid.` for each file.
 Each first receipt reports `duplicate=false`; its repeated receipt reports `duplicate=true` with the same identifiers.
 Workers publish three result files and then exit.
 Read each result's status to distinguish scores from operational errors.
-Copernicus does not read these results or Yamata's private queue database in this slice.
+Use the [result importer](lifecycle.md) to read these published outcomes.
+Copernicus never reads Yamata's private queue database.
 
 ## Failure and restart behavior
 
@@ -196,11 +199,13 @@ Each job is limited to one mebibyte; the outbox retains at most 10,000 jobs and 
 Published jobs count toward those limits because their original bytes remain stored.
 Exceeding a storage limit rolls back the request that would exceed it.
 
-Write commands upgrade database versions `1` and `2` to version `3` in one transaction.
+The outbox migration upgrades database versions `1` and `2` to version `3`.
+Current write commands also apply [schema four](lifecycle.md#storage-and-recovery), which adds result imports.
 Stop older commands and back up the database before upgrading.
+
 The migration queues compatible executions from existing snapshots without consulting edited catalog definitions.
 A corrupt snapshot or incompatible ready snapshot fails the upgrade and leaves the old schema intact.
-Read-only catalog and request commands preserve supported older versions; `outbox show` requires version `3`.
+Read-only catalog and request commands preserve supported older versions; `outbox show` requires version `3` or `4`.
 Unknown database versions remain rejected.
 
 ## Clean up the walkthrough

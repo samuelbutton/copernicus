@@ -162,10 +162,12 @@ Concurrent identical submissions return one accepted request and one set of exec
 A failed write or process exit before commit rolls back the request, execution records, and outgoing jobs.
 
 The [schema migration](../internal/store/requests-v2.sql) adds request storage to existing catalog databases without changing catalog records.
-Write commands now upgrade schema versions `1` and `2` to version `3` in one transaction.
+Current write commands upgrade supported older schemas to version `4` in one transaction.
 The [outbox migration](../internal/store/outbox-v3.sql) adds jobs from existing frozen snapshots.
+
 Catalog inspection can still read version `1` without upgrading it.
-Request inspection accepts versions `2` and `3` through a read-only connection.
+Request inspection accepts versions `2` through `4` through a read-only connection.
+[Progress queries](lifecycle.md#completion-counts) require schema four.
 Unknown schema versions remain rejected.
 
 Database triggers prevent changing or deleting saved snapshots and initial execution resolution fields.

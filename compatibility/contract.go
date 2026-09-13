@@ -35,7 +35,7 @@ type Job struct {
 	InputsHash      string          `json:"inputs_hash"`
 }
 
-var jobSchema = sync.OnceValues(func() (*jsonschema.Schema, error) {
+var documentSchemas = sync.OnceValues(func() (map[string]*jsonschema.Schema, error) {
 	value, err := jsonschema.UnmarshalJSON(bytes.NewReader(exchangeSchema))
 	if err != nil {
 		return nil, err
@@ -46,7 +46,15 @@ var jobSchema = sync.OnceValues(func() (*jsonschema.Schema, error) {
 	if err := c.AddResource(base, value); err != nil {
 		return nil, err
 	}
-	return c.Compile(base + "#/$defs/job")
+	schemas := map[string]*jsonschema.Schema{}
+	for _, kind := range []string{"job", "result", "event", "bag", "tick"} {
+		schema, err := c.Compile(base + "#/$defs/" + kind)
+		if err != nil {
+			return nil, err
+		}
+		schemas[kind] = schema
+	}
+	return schemas, nil
 })
 
 type localOnly struct{}
@@ -57,18 +65,7 @@ func (localOnly) Load(string) (any, error) { return nil, errors.New("external sc
 // It validates file structure, not local implementation availability or results.
 func ParseJob(data []byte) (Job, error) {
 	var job Job
-	value, err := decode(data)
-	if err != nil {
-		return job, err
-	}
-	schema, err := jobSchema()
-	if err != nil {
-		return job, err
-	}
-	if err := schema.Validate(value); err != nil {
-		return job, fmt.Errorf("job contract: %w", err)
-	}
-	if err := json.Unmarshal(data, &job); err != nil {
+	if err := ValidateDocument(data, "job", &job); err != nil {
 		return job, err
 	}
 	digest, err := ContentHash(job.Inputs)
@@ -92,8 +89,7 @@ func ContentHash(data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sum := sha256.Sum256(canonical)
-	return hex.EncodeToString(sum[:]), nil
+	return hashBytes(canonical), nil
 }
 
 func decode(data []byte) (any, error) {
@@ -167,3 +163,26 @@ func readValue(d *json.Decoder, depth int) (any, error) {
 	}
 	return token, nil
 }
+
+// ValidateDocument checks a complete JSON record against one pinned schema.
+// Relationship checks remain necessary before accepting a result or event.
+func ValidateDocument(data []byte, kind string, target any) error {
+	value, err := decode(data)
+	if err != nil {
+		return err
+	}
+	schemas, err := documentSchemas()
+	if err != nil {
+		return err
+	}
+	schema, ok := schemas[kind]
+	if !ok {
+		return errors.New("unsupported document kind")
+	}
+	if err := schema.Validate(value); err != nil {
+		return fmt.Errorf("invalid %s schema: %w", kind, err)
+	}
+	return json.Unmarshal(data, target)
+}
+
+func hashBytes(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }

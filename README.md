@@ -11,7 +11,9 @@ A browser introduction explains the driving example.
 You can save a request that preserves the selected instructions, even after a group changes.
 You can deliver the saved instructions as job files for Yamata to run.
 Delivery can resume after an interruption.
-Loading and comparing results will come later.
+
+You can load published results and check how many tests have finished.
+Missing files remain incomplete, and failed tests stay visible.
 
 ## Technical summary
 
@@ -27,6 +29,9 @@ The [execution source record](compatibility/yamata.json) pins the reviewed revis
 The [copied public contract](compatibility/contract/v1/) supplies schemas and examples without requiring another checkout.
 Compatible jobs commit with their request, then publish through a separate command.
 Publication does not start workers or import results.
+
+The result importer validates published files and maps exact accepted jobs back to requests.
+A read-only local HTTP API exposes snapshots, progress, and the result index.
 
 ## Build and read the command help
 
@@ -79,6 +84,11 @@ The guide also covers repeat-safe submissions, incompatible tests, and cleanup.
 Follow the [exchange walkthrough](docs/exchange.md#save-a-request-before-publication) to publish saved jobs and resume after an interruption.
 The guide explains delivery status, conflicts, the pinned contract, and optional worker handoff.
 
+## Import results and check progress
+
+Follow the [lifecycle walkthrough](docs/lifecycle.md) to import results, inspect completion, rebuild the index, and use the local HTTP API.
+The first procedure uses copied contract examples and requires no execution service.
+
 ## Open the browser introduction
 
 Prerequisites: the installed web dependencies above and a modern browser.
@@ -120,7 +130,7 @@ To remove installed web dependencies separately, run `rm -rf web/node_modules` f
 Start with the [code tour](docs/code-tour.md), [glossary](docs/glossary.md), and [contribution guide](CONTRIBUTING.md).
 The [writing guide](docs/writing.md) defines the public documentation and naming rules.
 The command stores frozen requests; the browser introduction remains static.
-Result import and comparison belong to later work.
+Request comparisons and the interactive review interface belong to later work.
 
 ## License
 

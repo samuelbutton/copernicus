@@ -3,7 +3,7 @@
 The first version has two independent entry points: a Go command and a static browser introduction.
 The command manages a SQLite catalog, frozen requests, and outgoing job files.
 The browser introduction remains static.
-Neither entry point reads simulation results.
+The command imports validated results and serves read-only request progress.
 
 | Path | Responsibility |
 | --- | --- |
@@ -25,6 +25,14 @@ Neither entry point reads simulation results.
 | [internal/exchange/publish.go](../internal/exchange/publish.go) | Synchronizes files and publishes with an exclusive atomic rename. |
 | [compatibility/contract.go](../compatibility/contract.go) | Validates job structure and public input hashes using the embedded schema. |
 | [compatibility/contract/v1/](../compatibility/contract/v1/) | Preserves pinned public schemas, examples, and their checksum manifest. |
+| [compatibility/outcomes.go](../compatibility/outcomes.go) | Checks event identity, result relationships, metrics, and recording structure. |
+| [internal/exchange/read.go](../internal/exchange/read.go) | Reads bounded public files within their declared folders. |
+| [internal/store/results.go](../internal/store/results.go) | Imports events and results transactionally and rebuilds the derived index. |
+| [internal/store/results-v4.sql](../internal/store/results-v4.sql) | Preserves publication identities, accepted events, and result references. |
+| [internal/store/progress.go](../internal/store/progress.go) | Maps exact jobs to requests and revalidates results before counting completion. |
+| [internal/httpapi/api.go](../internal/httpapi/api.go) | Exposes bounded read-only JSON routes with local-origin checks. |
+| [cmd/copernicus/serve.go](../cmd/copernicus/serve.go) | Owns loopback binding, HTTP timeouts, and graceful shutdown. |
+| [cmd/copernicus/results.go](../cmd/copernicus/results.go) | Imports, lists, and rebuilds the result index. |
 | [cmd/copernicus/outbox.go](../cmd/copernicus/outbox.go) | Inspects delivery state and runs a bounded publication batch. |
 | [cmd/copernicus/requests.go](../cmd/copernicus/requests.go) | Creates and reads saved requests. |
 | [compatibility/source.go](../compatibility/source.go) | Embeds the execution source record for independent CLI use. |
@@ -54,3 +62,5 @@ The [request guide](requests.md) demonstrates unchanged snapshots after suite ed
 
 The [exchange guide](exchange.md) maps request fields to jobs and demonstrates restart recovery.
 The [outbox tests](../internal/store/outbox_test.go) exercise process exits across the transaction and publication boundary.
+
+The [lifecycle guide](lifecycle.md) explains result validation, completion counts, replay, and index recovery.
