@@ -1,8 +1,8 @@
 # Frozen requests
 
 A catalog describes tests that a reviewer can select.
-A request preserves one selection and its inputs at a specific point.
-Changing a suite affects future requests; it cannot change a saved request.
+A request keeps one selection and its inputs at a specific point.
+Changing a suite affects future requests. It cannot change a saved request.
 This lets a reviewer explain which instructions produced a later result.
 
 ## Create a request and change a suite
@@ -24,8 +24,9 @@ cmp "$request_dir/before.json" "$request_dir/after.json"
 Expect exit code `0` from each command.
 The request selects `stopped-obstacle`, `empty-lane`, and `moving-obstacle`, in that order.
 Its execution records have resolution status `READY`.
-The suite edit removes `stopped-obstacle` from `smoke`; the `obstacles` suite still contains that test.
-The saved request retains both original suite memberships.
+
+The suite edit removes `stopped-obstacle` from `smoke`. The `obstacles` suite still contains that test.
+The saved request keeps both original suite memberships.
 `cmp` prints nothing because the two saved outputs have identical bytes.
 
 From the same shell and repository root, repeat the submission:
@@ -64,15 +65,16 @@ From the same shell and repository root, run:
 The extra catalog contains one unsupported scenario type and one supported test.
 Request creation saves both selections and returns exit code `0`.
 The unsupported test has status `RESOLUTION_FAILED` and reason `UNSUPPORTED_SCENARIO_TYPE`.
-The supported test retains status `READY`.
+The supported test keeps status `READY`.
 The request's overall resolution status is `RESOLUTION_FAILED` because at least one test is incompatible.
 
 Exit code `0` means the record was saved or read successfully.
 It does not mean that resolution succeeded or that any driving test passed.
 Read `resolution_status` and each execution's `reason` to determine the resolution outcome.
+
 Compatible tests also receive jobs in the durable outbox.
 Failed tests receive no job, even when other tests in the request are compatible.
-The separate [publication command](exchange.md) delivers those files; execution workers are started independently.
+The separate [publication command](exchange.md) delivers those files. Execution workers are started independently.
 
 ## Clean up the walkthrough
 
@@ -90,13 +92,13 @@ make clean
 
 These commands remove only the walkthrough files and generated builds.
 Source files and installed dependencies remain available.
-`make clean` alone preserves all catalog and request databases.
+`make clean` alone keeps all catalog and request databases.
 
 ## Submission identity
 
 The required fields are the request identifier, collection identifier, controller identifier, and requester identifier.
 These fields use the catalog's identifier rules.
-The requester is a local label; this example provides no authentication or authorization service.
+The requester is a local label. This example provides no authentication or authorization service.
 Optional CLI fields are priority, seed, and repeat number.
 Their defaults are `1`, `0`, and `0`.
 
@@ -108,8 +110,8 @@ One submission selects one repeat number, not a count of repeated runs.
 The request identifier is the submission identity within one database.
 Every submission field participates in its identity check.
 An identical retry returns the saved outcome, including any resolution failures.
-Changing any submission field while retaining the identifier is a conflict.
-The accepted snapshot also retains its original execution-source revision after a later software update.
+Changing any submission field while keeping the identifier is a conflict.
+The accepted snapshot also keeps its original execution-source revision after a later software update.
 
 ## Snapshot contents and hashes
 
@@ -126,8 +128,8 @@ The snapshot includes these values:
 Each frozen reference stores its catalog identifier, content, and SHA-256 hash.
 The hash identifies the exact compact JSON bytes in that reference's `content` field.
 Catalog identifiers are separate metadata and are excluded from that content hash.
-Changing scenario values changes its content hash; changing only its catalog identifier does not.
-Membership content retains ordered member identifiers, so a membership edit changes its hash.
+Changing scenario values changes its content hash. Changing only its catalog identifier does not.
+Membership content keeps ordered member identifiers, so a membership edit changes its hash.
 
 The encoding uses Go's JSON encoder, sorted top-level content keys, and the declared nested model fields.
 Input-file whitespace does not affect these hashes because imports first decode typed records.
@@ -137,12 +139,12 @@ The snapshot hash covers the exact compact bytes of the whole snapshot object.
 
 Controller content is a named implementation and version, as defined by the catalog.
 The snapshot also freezes the reviewed Yamata source revision from [the source record](../compatibility/yamata.json).
-This version selects built-in controllers; it does not import arbitrary controller binaries.
+This version selects built-in controllers. It does not import arbitrary controller binaries.
 The hashes describe frozen inputs, not proof that execution occurred.
 The [adapter](../internal/adapter/jobs.go) calculates separate public input and file hashes after translating the frozen inputs.
 
 Execution identifiers derive deterministically from submission details, the test identifier, and the frozen input hashes.
-Distinct tests retain distinct execution identifiers even when their input content matches.
+Distinct tests keep distinct execution identifiers even when their input content matches.
 Repeated membership of the same test produces one execution record.
 Read and retry commands return stored bytes instead of reconstructing snapshots from the live catalog.
 
@@ -172,14 +174,15 @@ Unknown schema versions remain rejected.
 
 Database triggers prevent changing or deleting saved snapshots and initial execution resolution fields.
 Read commands verify the stored hashes and matching execution records.
-Suite membership remains editable through `catalog set-suite`; invalid edits roll back without changing the suite.
+Suite membership remains editable through `catalog set-suite`. Invalid edits roll back without changing the suite.
+
 Other catalog imports still add records and reject duplicate identifiers.
-Use `--tests=` explicitly to clear a suite; omitting `--tests` is an error.
+Use `--tests=` explicitly to clear a suite. Omitting `--tests` is an error.
 
 A request can contain at most 1,000 unique tests and 16 mebibytes of snapshot JSON.
 The local request store permits at most 1,000 requests and 64 mebibytes of snapshot JSON.
-Commands retain the existing 30-second deadline and three-second database lock wait.
-These bounds limit local storage and work; they are not team execution budgets.
+Commands keep the existing 30-second deadline and three-second database lock wait.
+These bounds limit local storage and work. They are not team execution budgets.
 
 If confirmation output fails after saving, the error explicitly says the request was saved.
 Use `request show` or repeat the identical submission to retrieve the accepted outcome.
@@ -191,9 +194,9 @@ The [command tests](../cmd/copernicus/requests_test.go) verify the CLI workflow 
 The [review interface](review-guide.md) accepts an optional ordered `suite_ids` array in a submission.
 Every selected suite must belong to the selected collection.
 Empty arrays, duplicate identifiers, and unknown memberships are rejected.
-The snapshot freezes only the selected suites and their unique tests, preserving selection order.
+The snapshot freezes only the selected suites and their unique tests, keeping selection order.
 
-Omitting `suite_ids` selects the entire collection and preserves the earlier submission encoding.
+Omitting `suite_ids` selects the entire collection and keeps the earlier submission encoding.
 Selected suites participate in submission identity, so changing them requires a new request identifier.
 The browser sends priority `1`, repeat `0`, requester `reviewer`, and a visible editable seed.
 The HTTP boundary requires explicit scalar fields and limits the submission to 131,072 bytes.
@@ -201,4 +204,4 @@ The HTTP boundary requires explicit scalar fields and limits the submission to 1
 [Reanalysis](reanalysis.md) adds immutable scoring selections without changing the request snapshot or its executions.
 
 [Admission limits](decisions.md#budget-decisions) reserve maximum simulation ticks in the request transaction.
-The optional `team_id` selects a configured local budget; omission preserves earlier submission bytes and uses team `local`.
+The optional `team_id` selects a configured local budget. Omission keeps earlier submission bytes and uses team `local`.

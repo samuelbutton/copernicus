@@ -1,108 +1,82 @@
 # Code tour
 
-The Go command and browser package build independently.
-The command manages a SQLite catalog, frozen requests, and outgoing job files.
-The browser selects suites, creates requests, and reviews progress, comparisons, and cited evidence.
-The command imports validated results and serves the local review interface.
+Start with `make demo` in the [README](../README.md#run-the-standalone-demo).
+Open the stopped-obstacle result and its cited recording tick.
+Then follow the same data through the boundaries below.
 
-| Path | Responsibility |
-| --- | --- |
-| [cmd/copernicus/main.go](../cmd/copernicus/main.go) | Routes commands, bounds command duration, and reports failures. |
-| [cmd/copernicus/catalog.go](../cmd/copernicus/catalog.go) | Reads an import file and runs catalog commands. |
-| [internal/catalog/model.go](../internal/catalog/model.go) | Defines records and validates their values. |
-| [internal/catalog/json.go](../internal/catalog/json.go) | Rejects oversized or ambiguous JSON input. |
-| [internal/store/catalog.go](../internal/store/catalog.go) | Owns SQLite transactions and consistent catalog reads. |
-| [internal/store/schema.sql](../internal/store/schema.sql) | Enforces identifiers, references, and ordered memberships. |
-| [internal/catalog/expand.go](../internal/catalog/expand.go) | Expands a collection with first-occurrence ordering. |
-| [internal/request/resolve.go](../internal/request/resolve.go) | Resolves selected definitions into immutable snapshot content. |
-| [internal/request/model.go](../internal/request/model.go) | Defines submissions, frozen references, and content hashes. |
-| [internal/store/requests.go](../internal/store/requests.go) | Saves requests and executions together, with submission identity checks. |
-| [internal/store/suites.go](../internal/store/suites.go) | Changes existing suite membership in one transaction. |
-| [internal/store/requests-v2.sql](../internal/store/requests-v2.sql) | Adds request tables and snapshot immutability constraints. |
-| [internal/adapter/jobs.go](../internal/adapter/jobs.go) | Translates frozen inputs into validated run jobs. |
-| [internal/store/outbox.go](../internal/store/outbox.go) | Saves jobs, migrates accepted requests, and acknowledges durable publication. |
-| [internal/store/outbox-v3.sql](../internal/store/outbox-v3.sql) | Enforces immutable job bytes and one exchange destination. |
-| [internal/exchange/publish.go](../internal/exchange/publish.go) | Synchronizes files and publishes with an exclusive atomic rename. |
-| [compatibility/contract.go](../compatibility/contract.go) | Validates job structure and public input hashes using the embedded schema. |
-| [compatibility/contract/v1/](../compatibility/contract/v1/) | Preserves pinned public schemas, examples, and their checksum manifest. |
-| [compatibility/outcomes.go](../compatibility/outcomes.go) | Checks event identity, result relationships, metrics, and recording structure. |
-| [internal/exchange/read.go](../internal/exchange/read.go) | Reads bounded public files within their declared folders. |
-| [internal/store/results.go](../internal/store/results.go) | Imports events and results transactionally and rebuilds the derived index. |
-| [internal/store/results-v4.sql](../internal/store/results-v4.sql) | Preserves publication identities, accepted events, and result references. |
-| [internal/store/progress.go](../internal/store/progress.go) | Maps exact jobs to requests and revalidates results before counting completion. |
-| [internal/httpapi/api.go](../internal/httpapi/api.go) | Exposes bounded JSON routes with local-origin checks. |
-| [cmd/copernicus/serve.go](../cmd/copernicus/serve.go) | Owns loopback binding, HTTP timeouts, and graceful shutdown. |
-| [cmd/copernicus/results.go](../cmd/copernicus/results.go) | Imports, lists, and rebuilds the result index. |
-| [internal/comparison/model.go](../internal/comparison/model.go) | Pairs frozen selections and preserves complete denominators. |
-| [internal/comparison/deltas.sql](../internal/comparison/deltas.sql) | Queries compatible metric values, pass flags, and deltas in DuckDB. |
-| [internal/comparison/duckdb.go](../internal/comparison/duckdb.go) | Restricts the query process to private copies of validated results. |
-| [internal/store/comparisons.go](../internal/store/comparisons.go) | Reads frozen selections and validates their exact selected outcomes. |
-| [cmd/copernicus/compare.go](../cmd/copernicus/compare.go) | Runs comparison reads and optional terminal-page saving. |
-| [scripts/install-duckdb.sh](../scripts/install-duckdb.sh) | Installs the pinned executable after verifying its archive checksum. |
-| [cmd/copernicus/outbox.go](../cmd/copernicus/outbox.go) | Inspects delivery state and runs a bounded publication batch. |
-| [cmd/copernicus/requests.go](../cmd/copernicus/requests.go) | Creates and reads saved requests. |
-| [compatibility/source.go](../compatibility/source.go) | Embeds the execution source record for independent CLI use. |
-| [examples/catalog.json](../examples/catalog.json) | Supplies synthetic definitions for the catalog walkthrough. |
-| [cmd/copernicus/main_test.go](../cmd/copernicus/main_test.go) | Checks help, rejected arguments, and output errors. |
-| [web/index.html](../web/index.html) | Defines the document, initial message, and local asset policy. |
-| [web/src/main.tsx](../web/src/main.tsx) | Mounts the React application. |
-| [web/src/App.tsx](../web/src/App.tsx) | Routes review views and manages navigation focus. |
-| [web/src/styles.css](../web/src/styles.css) | Owns semantic colors, spacing, type sizes, focus states, and responsive layout. |
-| [web/tsconfig.json](../web/tsconfig.json) | Requires strict browser-side type checking. |
-| [web/eslint.config.mjs](../web/eslint.config.mjs) | Checks typed source and React Hook rules. |
-| [web/package.json](../web/package.json) | Owns web commands and pinned direct dependencies. |
-| [Makefile](../Makefile) | Builds, checks, previews, formats, and cleans the two packages. |
-| [compatibility/yamata.json](../compatibility/yamata.json) | Records the reviewed execution source revision. |
+## Follow one test
 
-The command passes an output writer to its argument handler.
-Tests can observe help and writer failures without starting a child process.
-The actual binary reports failure with exit code `1`.
+```mermaid
+flowchart LR
+    Catalog[Editable catalog] --> Resolve[Frozen request]
+    Resolve --> State[(SQLite and outbox)]
+    State --> Jobs[Public jobs]
+    Jobs --> Engine[Yamata]
+    Engine --> Files[Published results and bags]
+    Files --> Import[Validated result index]
+    Import --> Compare[Compatible comparison]
+    Compare --> Browser[Review and evidence]
+```
 
-The browser validates response data with Zod and manages HTTP state with TanStack Query.
-The [review guide](review-guide.md) explains server startup and the complete browser workflow.
+Copernicus owns selection, admission, dispatch records, imports, and review.
+Yamata owns simulation, recordings, and scoring.
+Each program owns its database. Their commands exchange public files.
+The standalone demo copies reviewed files instead of starting Yamata.
 
-The [test-model guide](test-model.md) explains catalog relationships, validation, failure behavior, and cleanup.
+## Design claims and evidence
 
-The [request guide](requests.md) demonstrates unchanged snapshots after suite edits and explains submission retries.
+Each row links a behavior to its implementation and a test that can reject an incorrect change.
+Tests use synthetic inputs and temporary state.
 
-The [exchange guide](exchange.md) maps request fields to jobs and demonstrates restart recovery.
-The [outbox tests](../internal/store/outbox_test.go) exercise process exits across the transaction and publication boundary.
+| Behavior | Implementation | Verification |
+| --- | --- | --- |
+| Help has no storage side effects. Command errors produce failure exits. | [Command boundary](../cmd/copernicus/main.go) | [Command tests](../cmd/copernicus/main_test.go) |
+| Catalog imports reject ambiguous JSON and broken references atomically. | [Validation](../internal/catalog/json.go), [catalog store](../internal/store/catalog.go) | [Input tests](../internal/catalog/catalog_test.go), [store tests](../internal/store/catalog_test.go) |
+| Collection expansion keeps each test's first occurrence. | [Expansion](../internal/catalog/expand.go) | [Expansion tests](../internal/store/catalog_test.go) |
+| Requests freeze complete inputs. Later suite edits cannot change them. | [Resolver](../internal/request/resolve.go), [request store](../internal/store/requests.go) | [Snapshot tests](../internal/store/requests_test.go) |
+| Identical request retries return one snapshot and one reservation. | [Admission](../internal/store/budgets.go) | [Budget tests](../internal/store/budgets_test.go) |
+| Requests, compatible jobs, and budget reservations commit together. | [Request transaction](../internal/store/requests.go) | [Rollback tests](../internal/store/requests_test.go), [admission tests](../internal/store/budgets_test.go) |
+| The adapter uses only frozen inputs and the pinned public contract. | [Job adapter](../internal/adapter/jobs.go), [source record](../compatibility/yamata.json) | [Adapter tests](../internal/adapter/jobs_test.go), [contract tests](../compatibility/contract_test.go) |
+| Publication survives process exit without replacing accepted bytes. | [Outbox](../internal/store/outbox.go), [publisher](../internal/exchange/publish.go) | [Process recovery tests](../internal/store/outbox_test.go) |
+| Imports validate exact job ownership, result hashes, and recordings. | [Outcome validation](../compatibility/outcomes.go), [importer](../internal/store/results.go) | [Import tests](../internal/store/results_test.go) |
+| Replay and index rebuild keep accepted request state. | [Result store](../internal/store/results.go) | [Recovery tests](../internal/store/results_test.go) |
+| Missing evidence becomes incomplete and cannot supply a passing score. | [Progress](../internal/store/progress.go), [review](../internal/store/review.go) | [Progress tests](../internal/store/results_test.go), [review tests](../internal/store/review_test.go) |
+| Pairing excludes controller differences and rejects incompatible scoring content. | [Comparison plan](../internal/comparison/model.go) | [Comparison tests](../internal/comparison/comparison_test.go) |
+| DuckDB reads private copies of validated results with bounded resources. | [Query process](../internal/comparison/duckdb.go), [SQL](../internal/comparison/deltas.sql) | [Query tests](../internal/comparison/comparison_test.go) |
+| Filters and pages keep complete denominators. | [View selection](../internal/comparison/view.go) | [View tests](../internal/comparison/view_test.go) |
+| Only complete selections reuse saved pages, after fresh evidence checks. | [Saved comparisons](../internal/store/saved_comparisons.go) | [Cache tests](../internal/store/saved_comparisons_test.go) |
+| New scores keep original recordings, snapshots, and results. | [Analysis selections](../internal/store/analysis.go), [analysis adapter](../internal/adapter/analysis.go) | [Analysis tests](../internal/store/analysis_test.go), [browser tests](../web/e2e/review.spec.ts) |
+| HTTP access stays on loopback and rejects foreign browser origins. | [Server](../cmd/copernicus/serve.go), [HTTP boundary](../internal/httpapi/review.go) | [HTTP tests](../internal/httpapi/review_test.go) |
+| Browser drafts survive failures. Links keep explicit review selections. | [Request form](../web/src/CreateRequest.tsx), [comparison view](../web/src/Comparison.tsx) | [Browser acceptance](../web/e2e/review.spec.ts) |
+| Evidence views show only ticks cited by the selected result. | [Review reads](../internal/store/review.go), [evidence view](../web/src/Execution.tsx) | [Review tests](../internal/store/review_test.go), [browser acceptance](../web/e2e/review.spec.ts) |
+| The combined demo builds the recorded revision without editing its source checkout. | [Engine build](../scripts/walkthrough.py) | [Public walkthrough checks](../tests/walkthrough.py) |
+| Standalone results match fresh execution except duration and queue attempt identifiers. | [Reference manifest](../examples/reference/v1/manifest.json), [walkthrough](../scripts/walkthrough.py) | [Reference drift checks](../tests/walkthrough.py) |
+| Demo creation refuses existing directories. Cleanup requires its original ownership marker. | [Demo lifecycle](../scripts/walkthrough.py) | [Cleanup rejection tests](../tests/walkthrough.py) |
 
-The [lifecycle guide](lifecycle.md) explains result validation, completion counts, replay, and index recovery.
+## Read by responsibility
 
-The [comparison guide](comparisons.md) explains matching, metric deltas, unavailable values, and direct SQL inspection.
-The [comparison tests](../internal/comparison/comparison_test.go) cover equal values, regressions, content conflicts, metric conflicts, ambiguity, and denominators.
+The command package parses arguments, creates dependencies, bounds operations, and reports failures.
+Pure catalog, request, and comparison packages calculate values without starting services.
+The store package owns SQLite transactions and joins saved state with validated public files.
+The exchange package owns bounded file reads and durable publication.
 
-| Review path | Responsibility |
-| --- | --- |
-| [internal/httpapi/review.go](../internal/httpapi/review.go) | Serves bounded built assets and validates same-origin request submissions. |
-| [internal/store/review.go](../internal/store/review.go) | Joins saved inputs with current results and restricts evidence to cited ticks. |
-| [web/src/api.ts](../web/src/api.ts) | Validates response contracts and owns query freshness and bounded request listing. |
-| [web/src/CreateRequest.tsx](../web/src/CreateRequest.tsx) | Preserves drafts and submits selected suites with repeat-safe identities. |
-| [web/src/Requests.tsx](../web/src/Requests.tsx) | Shows request history and complete progress denominators. |
-| [web/src/Comparison.tsx](../web/src/Comparison.tsx) | Presents both selections, metric deltas, and paged evidence links. |
-| [web/src/Execution.tsx](../web/src/Execution.tsx) | Displays immutable inputs and validated recording evidence. |
-| [web/e2e/review.spec.ts](../web/e2e/review.spec.ts) | Exercises the browser against temporary databases and the public engine CLI. |
+The browser validates API responses in [api.ts](../web/src/api.ts).
+[App.tsx](../web/src/App.tsx) maps URL selections to review views.
+[styles.css](../web/src/styles.css) owns shared colors, spacing, focus, and responsive layouts.
+[Browser acceptance tests](../web/e2e/review.spec.ts) check keyboard access, missing data, and narrow layouts.
 
-| Reanalysis path | Responsibility |
-| --- | --- |
-| [internal/adapter/analysis.go](../internal/adapter/analysis.go) | Creates public analysis jobs for pinned recordings and scoring configurations. |
-| [internal/store/analysis.go](../internal/store/analysis.go) | Saves complete immutable selections, reuses equivalent jobs, and rejects missing original recordings. |
-| [internal/store/analysis-v5.sql](../internal/store/analysis-v5.sql) | Preserves original jobs and adds separate saved scoring selections. |
-| [internal/httpapi/analysis.go](../internal/httpapi/analysis.go) | Validates selected-analysis queries and same-origin analysis submissions. |
-| [cmd/copernicus/analysis.go](../cmd/copernicus/analysis.go) | Creates, lists, and reads progress for scoring selections. |
-| [web/src/Analysis.tsx](../web/src/Analysis.tsx) | Offers explicit scoring choices and requests new scores. |
-| [examples/reanalysis-catalog.json](../examples/reanalysis-catalog.json) | Supplies body-edge gap scoring without changing original definitions. |
+The [Makefile](../Makefile) separates build, demo, verification, and cleanup commands.
+The [walkthrough tests](../tests/walkthrough.py) use public CLI and HTTP boundaries without direct database writes.
+The [reference guide](../examples/reference/README.md) explains provenance and regeneration.
+The [troubleshooting guide](troubleshooting.md) explains recovery without editing accepted identities.
 
-The [reanalysis guide](reanalysis.md) verifies preserved recordings and original results through the public execution boundary.
+## Continue with a topic
 
-| Admission and saved comparisons | Responsibility |
-| --- | --- |
-| [internal/request/budget.go](../internal/request/budget.go) | Calculates maximum simulation tick reservations from frozen ready executions. |
-| [internal/store/budgets.go](../internal/store/budgets.go) | Configures team limits, reserves admission atomically, and accounts for legacy requests. |
-| [internal/store/admission-v6.sql](../internal/store/admission-v6.sql) | Enforces budget reservations and immutable saved comparisons. |
-| [cmd/copernicus/budget.go](../cmd/copernicus/budget.go) | Sets cumulative limits and shows remaining team allowances. |
-| [internal/comparison/view.go](../internal/comparison/view.go) | Defines cache identity and filters, orders, and pages complete comparisons. |
-| [internal/store/saved_comparisons.go](../internal/store/saved_comparisons.go) | Revalidates evidence before cache lookup and bounds saved-page storage. |
-
-The [decisions guide](decisions.md) explains admission, safe retries, terminal caching, partial bypass, and the local analytical boundary.
+- [Test model](test-model.md): catalog records and selection order.
+- [Requests](requests.md): frozen inputs and submission identity.
+- [Exchange](exchange.md): durable publication and restart.
+- [Lifecycle](lifecycle.md): import, progress, and index recovery.
+- [Comparisons](comparisons.md): pairing, deltas, and denominators.
+- [Review](review-guide.md): browser actions and evidence.
+- [Reanalysis](reanalysis.md): kept recordings and explicit scoring versions.
+- [Decisions](decisions.md): admission budgets and saved comparison identity.

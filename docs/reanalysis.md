@@ -1,6 +1,6 @@
 # Score saved recordings again
 
-A recording preserves what happened during a test.
+A recording keeps what happened during a test.
 An analysis template defines how to score that recording.
 Changing the scoring rules can change a measurement without changing the recorded motion.
 Copernicus keeps the original scores and lets you select another saved analysis for review.
@@ -72,13 +72,13 @@ yamata workers --exchange-dir "$score_dir/exchange" --simulation-workers 0 --ana
 
 Creation prints an immutable selection with its template and execution-to-job mapping.
 The list includes `original` and `edge-v2`.
-Before processing, the new selection has zero completed tests; the original selection retains three.
+Before processing, the new selection has zero completed tests. The original selection keeps three.
 The worker command disables simulation and processes only analysis work.
 Repeated deliveries of original jobs return duplicate receipts.
 
 The comparison reports three `INCOMPARABLE` groups because the selected scoring configurations differ.
 It produces no metric deltas for those groups.
-A successful command means the comparison was read; it does not mean the scores were compatible.
+A successful command means the comparison was read. It does not mean the scores were compatible.
 
 ## Match the baseline and verify preservation
 
@@ -167,37 +167,38 @@ Open [the local interface](http://127.0.0.1:8080/).
 
 Selecting `original` and `edge-v2` produces incompatible groups.
 Selecting `edge-v2` on both sides restores comparisons.
-**Selected score limits** shows the chosen template; **Original score limits** retains the initial configuration.
-Review links, evidence links, and comparison pagination preserve both analysis selections.
-Browser requests queue analysis jobs; repeat the publication, worker, and import commands to process new selections.
+**Selected score limits** shows the chosen template.  **Original score limits** keeps the initial configuration.
+Review links, evidence links, and comparison pagination keep both analysis selections.
+
+Browser requests queue analysis jobs. Repeat the publication, worker, and import commands to process new selections.
 
 ## Selection and recovery rules
 
 The reserved `original` selection uses each test's initial scoring template.
 Other selections use a catalog template ID and freeze its complete configuration for every original execution.
-A request can contain different original templates; one new selection applies the chosen template across all its tests.
-Comparison pairing retains each test's original logical analysis name.
+A request can contain different original templates. One new selection applies the chosen template across all its tests.
+Comparison pairing keeps each test's original logical analysis name.
 Compatibility then checks the selected template content, metric versions, and units.
 
 Creation requires validated original results and recordings for every selected test.
 Missing recordings, incomplete executions, and resolution failures reject the whole selection without saving partial jobs.
 A terminal error can be rescored when its validated result includes a recording.
 Unsupported scoring settings are rejected before publication.
-All later reads revalidate files; missing evidence becomes incomplete without selecting another result.
+All later reads revalidate files. Missing evidence becomes incomplete without selecting another result.
 
 Retries return the accepted immutable mapping, even if a recording later becomes unavailable.
 Equivalent template content reuses existing jobs, including original jobs when the configuration is unchanged.
 Catalog labels alone cannot create duplicate public analysis identities.
-Unknown selection IDs fail explicitly; there is no automatic newest-result selection.
+Unknown selection IDs fail explicitly. There is no automatic newest-result selection.
 
 Yamata needs the original accepted run in the same queue to recover geometry omitted from bag format one.
 Keep the exchange and its queue together.
 Copied recordings in a fresh queue lack that context.
-Copernicus reads public files and uses public commands; it does not open the execution engine's database.
+Copernicus reads public files and uses public commands. It does not open the execution engine's database.
 
-[Database schema five](../internal/store/analysis-v5.sql) preserves existing requests, result references, and outgoing job bytes during upgrade.
-It permits multiple analysis jobs per execution while retaining one original run job.
-Saved selections are immutable; the [result index](lifecycle.md#rebuild-the-result-index) remains derived and rebuildable.
+[Database schema five](../internal/store/analysis-v5.sql) keeps existing requests, result references, and outgoing job bytes during upgrade.
+It permits multiple analysis jobs per execution while keeping one original run job.
+Saved selections are immutable. The [result index](lifecycle.md#rebuild-the-result-index) remains derived and rebuildable.
 
 ## Stop and clean up
 

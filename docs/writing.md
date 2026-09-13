@@ -8,6 +8,7 @@ Keep legal notices and exact command syntax unchanged.
 Use active voice and give each sentence one topic.
 Keep instructions within 20 words and descriptions within 25 words per sentence.
 Give each paragraph one topic and no more than six sentences.
+Do not use semicolons in prose.
 Use the same term for the same concept.
 Define necessary technical terms in the [glossary](glossary.md).
 
@@ -21,7 +22,7 @@ Lead project summaries with plain language before technical details.
 
 Use Copernicus for this project and Yamata for the public execution boundary.
 Use generic names for other organizations, people, systems, and examples.
-Relevant public technology names and required repository or license metadata retain their correct names.
+Relevant public technology names and required repository or license metadata keep their correct names.
 Do not include private source notes, former employer names, private system names, aliases, or private links.
 Apply these rules to code, comments, paths, output, examples, diagrams, and documents.
 

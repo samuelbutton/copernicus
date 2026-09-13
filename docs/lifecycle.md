@@ -3,7 +3,7 @@
 A published result says what happened during one identified execution.
 Copernicus checks its supporting files before adding it to the local result index.
 Request progress counts validated outcomes against every frozen test.
-It defaults to original scores; an explicit analysis selection reads that saved set.
+It defaults to original scores. An explicit analysis selection reads that saved set.
 Missing files and unresolved tests cannot become passing results.
 
 ## Read the published contract examples
@@ -50,7 +50,7 @@ cmp "$lifecycle_dir/before.json" "$lifecycle_dir/after.json"
 The rebuild finds both results without reading event files.
 The comparison succeeds silently because result counts and references remain unchanged.
 Previously processed event identities remain recorded for duplicate detection.
-Rebuild changes only the derived result index; request snapshots, outgoing jobs, and publication identity history remain intact.
+Rebuild changes only the derived result index. Request snapshots, outgoing jobs, and publication identity history remain intact.
 
 For cleanup, stop commands using this temporary directory.
 From the repository root, run:
@@ -88,7 +88,7 @@ done
 
 The request contains three tests and reports zero completed outcomes.
 Accepted events can show `PENDING`, but only validated terminal results count as completed.
-Each import invocation exits after its scan; it starts no background worker.
+Each import invocation exits after its scan. It starts no background worker.
 
 From the same shell and repository root, run simulation while the importer is stopped:
 
@@ -116,7 +116,7 @@ cat "$run_dir/completed.json"
 ```
 
 Expect `total: 3`, `completed: 3`, `incomplete: 0`, and `complete: true`.
-The comparison succeeds silently; duplicate delivery and rebuilding preserve the selected outcomes.
+The comparison succeeds silently. Duplicate delivery and rebuilding keep the selected outcomes.
 Completion does not mean that every test passed.
 Read the separate pass, failure, warning, and error counts.
 Keep this temporary directory for the API procedure and cleanup below.
@@ -132,7 +132,7 @@ api_pid=$!
 ```
 
 The log prints `Read-only API: http://127.0.0.1:8080` when the listener is ready.
-An occupied port causes startup failure; the server does not select a different port automatically.
+An occupied port causes startup failure. The server does not select a different port automatically.
 From the same shell, read the selected request:
 
 ```sh
@@ -176,14 +176,14 @@ Pass, failure, warning, and error counts partition the completed outcomes.
 
 Resolution failures remain visible in `resolution_failed` and the per-execution list.
 They are included in `incomplete` because they never produced execution results.
-A warning preserves unavailable metrics; an error preserves its explicit failure class.
+A warning keeps unavailable metrics. An error keeps its explicit failure class.
 Neither is counted as a pass.
 Unknown executions remain unassigned until a matching local request supplies the exact job identity and hash.
 
 Before a result arrives, progress reports the furthest observed stage for the accepted job.
 Stages include `QUEUED`, `PUBLISHED`, `PENDING`, `RUNNING`, and `ANALYZING`.
 This is observed progress, not a claim about the worker's current lease or most recent attempt.
-Sequences belong to their job and attempt; timestamps do not order attempts.
+Sequences belong to their job and attempt. Timestamps do not order attempts.
 A late event cannot replace a validated terminal result with an earlier stage.
 
 Progress and result listings revalidate referenced files when read.
@@ -194,30 +194,31 @@ Preserve the exchange files for as long as the index is in use.
 ## Storage and recovery
 
 Schema four adds imported events, immutable publication identities, and the derived result index.
-Write commands upgrade supported older databases transactionally; read commands never migrate them.
+Write commands upgrade supported older databases transactionally. Read commands never migrate them.
 Stop older commands and back up the database before upgrading.
 The existing exchange binding applies to import, rebuild, and publication.
 A database cannot silently switch to a different exchange.
 
 Each successful import transaction accepts one event and its referenced result together.
-An exit before commit accepts neither; replay processes the same file again.
+An exit before commit accepts neither. Replay processes the same file again.
 Invalid files do not advance event progress, and other valid files can still commit.
-The import report includes rejected paths and bounded explanations; any rejection returns exit code `1`.
+
+The import report includes rejected paths and bounded explanations. Any rejection returns exit code `1`.
 Repair availability problems and repeat the command using the same database and exchange.
 
 Different bytes under an accepted identity or path are a conflict, including whitespace-only changes.
-The importer preserves the original accepted outcome and rejects the conflicting file.
+The importer keeps the original accepted outcome and rejects the conflicting file.
 Rebuild validates result files before replacing the index in one transaction.
 Validation or identity conflicts leave the previous index intact.
-Removed result files disappear from a successful rebuild; request snapshots and identity history remain available.
+Removed result files disappear from a successful rebuild. Request snapshots and identity history remain available.
 
 The reader selects direct public files from `events/`, `results/`, `jobs/`, and `bags/` only.
 It rejects links, traversal paths, non-regular files, oversized records, ambiguous JSON, and unsupported versions.
 Temporary files are ignored during scans.
 The [reader](../internal/exchange/read.go), [contract checks](../compatibility/outcomes.go), and [schema](../internal/store/results-v4.sql) own these validation and storage rules.
 
-Each scan accepts at most 10,000 selected files; each public folder has the same entry limit.
-The database retains at most 10,000 events, 10,000 results, 100,000 publication identities, and 64 mebibytes of result JSON.
+Each scan accepts at most 10,000 selected files. Each public folder has the same entry limit.
+The database keeps at most 10,000 events, 10,000 results, 100,000 publication identities, and 64 mebibytes of result JSON.
 JSON records are limited to one mebibyte and complete recordings to 16 mebibytes.
 Rebuild stages at most 64 mebibytes of result JSON.
 No automatic retention or cleanup service runs.
@@ -238,7 +239,7 @@ go test ./internal/store -run 'TestImporterProcessExitIsAtomic|TestResultProgres
 ```
 
 The tests exercise abrupt importer exit, duplicate and late events, missing files, and index recovery.
-Expect exit code `0`; temporary test files are removed automatically.
+Expect exit code `0`. Temporary test files are removed automatically.
 
 Prerequisites for walkthrough cleanup: the same shell variables and completed API procedure above.
 From the repository root, stop the API and remove only this walkthrough's data:
@@ -258,17 +259,18 @@ Source files, installed dependencies, and unrelated databases remain available.
 ## Select another analysis
 
 Use `analysis=ID` on request status, execution review, and cited-tick GET routes.
-Omitting this query selects `original`; unknown IDs return `404`.
+Omitting this query selects `original`. Unknown IDs return `404`.
 `GET /api/requests/{id}/analyses` lists the original selection and saved templates.
+
 In review-server mode, `POST /api/requests/{id}/analyses` accepts exactly `{"template_id":"edge-v2"}`.
 It requires the same origin, JSON content type, and custom request header as request creation.
 The default read-only server rejects this write.
 
 [Schema five](../internal/store/analysis-v5.sql) adds immutable analysis selections and permits separate analysis jobs for existing executions.
-Original results retain their exact job mapping.
-Index rebuild preserves all accepted analyses; selected progress never substitutes another result.
+Original results keep their exact job mapping.
+Index rebuild keeps all accepted analyses. Selected progress never substitutes another result.
 The [reanalysis guide](reanalysis.md) provides the complete procedure and cleanup.
 
 `GET /api/budgets` lists configured team limits, reserved ticks, and remaining ticks.
 [Schema six](decisions.md) adds admission accounting and saved comparison pages.
-The review server may save derived terminal comparison pages during GET reads; the default read-only server cannot.
+The review server may save derived terminal comparison pages during GET reads. The default read-only server cannot.

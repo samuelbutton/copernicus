@@ -1,11 +1,11 @@
 # Glossary
 
 Use each term with the meaning below.
-Some terms describe the planned review workflow; the README states which behavior is available now.
+The README explains the complete local review workflow.
 
 | Term | Meaning |
 | --- | --- |
-| Acknowledgement | A saved confirmation that a complete job file was published durably. |
+| Acknowledgment | A saved confirmation that a complete job file was published durably. |
 | Admission | Accepting a request only when its team can reserve the maximum simulation ticks. |
 | Budget reservation | The immutable simulation tick allowance charged to one accepted request. |
 | Cache | Bounded saved calculations that can be reused when their exact inputs still match. |
@@ -40,6 +40,10 @@ Some terms describe the planned review workflow; the README states which behavio
 | HTTP API | Local URLs that return structured data for another program to read. |
 | Index | Derived records that locate validated published results. |
 | Incomparable | A matched group whose pairing or scoring rules do not permit metric deltas. |
+| Git archive | A source snapshot exported from one identified Git commit. |
+| Ownership marker | A fixed file that identifies a directory created by the demo. |
+| Python | The runtime used by the public walkthrough and verification scripts. |
+| Reference bundle | Reviewed synthetic jobs, recordings, results, and their checksum manifest. |
 | JSON | A text format for structured data. |
 | Mebibyte | A unit containing 1,048,576 bytes. |
 | Membership | A test’s position in a suite, or a suite’s position in a collection. |

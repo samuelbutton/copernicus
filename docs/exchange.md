@@ -44,7 +44,7 @@ cp -R "$exchange_dir/exchange/jobs" "$exchange_dir/first-batch"
 The comparison succeeds silently because the accepted snapshot is unchanged.
 Publication reports `acknowledged: 1`, `pending: 2`, and `published: 1`.
 It creates one complete job file under `exchange/jobs/`.
-The database now retains the resolved absolute exchange path as its delivery destination.
+The database now keeps the resolved absolute exchange path as its delivery destination.
 
 From the same shell and repository root, resume the remaining deliveries:
 
@@ -61,7 +61,7 @@ diff -r "$exchange_dir/expected-jobs" "$exchange_dir/exchange/jobs"
 ```
 
 The first publication acknowledges the remaining two jobs.
-The repeated publication acknowledges zero jobs; the comparisons succeed silently.
+The repeated publication acknowledges zero jobs. The comparisons succeed silently.
 The final status reports `pending: 0` and `published: 3`.
 Each job's `execution_id` matches its saved execution in `request.json`.
 The suite edit does not change accepted job inputs or create replacement executions.
@@ -74,12 +74,12 @@ No background publisher or worker starts automatically.
 
 The [adapter](../internal/adapter/jobs.go) reads only the accepted snapshot.
 It emits one `run` job for each `READY` execution, in snapshot order.
-A `RESOLUTION_FAILED` execution emits no job; other compatible tests in that request remain eligible.
+A `RESOLUTION_FAILED` execution emits no job. Other compatible tests in that request remain eligible.
 An invalid ready snapshot rejects the entire request transaction or migration.
 
 | Saved value | Public job field |
 | --- | --- |
-| Execution identifier | `execution_id`, preserved exactly. |
+| Execution identifier | `execution_id`, kept exactly. |
 | SHA-256 of `run`, a newline, and the execution identifier | `job_id`: `j` followed by the first 63 hexadecimal characters. |
 | Request identifier | `correlation_id`. |
 | Submission priority | `priority`. |
@@ -95,11 +95,11 @@ Yamata receives resolved inputs and an optional correlation identifier, without 
 The adapter checks the frozen source against [the pinned revision](../compatibility/yamata.json).
 It rejects unsupported implementation versions before saving a job.
 
-Public input hashes sort object keys recursively, retain array order, and use shortest decimal integers.
+Public input hashes sort object keys recursively, keep array order, and use shortest decimal integers.
 The encoding contains no insignificant whitespace or final newline.
 File hashes cover the exact saved job bytes, including their final newline.
 Publication retrieves those bytes from SQLite instead of encoding the snapshot again.
-The [hash tests](../compatibility/contract_test.go) preserve the published example's known input hash.
+The [hash tests](../compatibility/contract_test.go) keep the published example's known input hash.
 
 ## Pinned schemas and published examples
 
@@ -116,13 +116,13 @@ These are synthetic contract examples, not results produced by this walkthrough.
 The [adapter test](../internal/adapter/jobs_test.go) reproduces the run example's input hash independently.
 
 The [lifecycle guide](lifecycle.md) covers result import.
-Analysis-only submission belongs to later work.
+The [reanalysis guide](reanalysis.md) covers analysis-only submission.
 
 ## Optional handoff to Yamata
 
 Prerequisites: the completed publication walkthrough and a `yamata` executable on `PATH`.
 Build that executable from the revision recorded in [the source record](../compatibility/yamata.json).
-Use the same temporary exchange and shell; stop any other execution commands using that exchange.
+Use the same temporary exchange and shell. Stop any other execution commands using that exchange.
 From the Copernicus repository root, run:
 
 ```sh
@@ -137,26 +137,27 @@ ls "$exchange_dir/exchange/results"
 ```
 
 Validation prints `Contract valid.` for each file.
-Each first receipt reports `duplicate=false`; its repeated receipt reports `duplicate=true` with the same identifiers.
+Each first receipt reports `duplicate=false`. Its repeated receipt reports `duplicate=true` with the same identifiers.
 Workers publish three result files and then exit.
+
 Read each result's status to distinguish scores from operational errors.
 Use the [result importer](lifecycle.md) to read these published outcomes.
 Copernicus never reads Yamata's private queue database.
 
 ## Failure and restart behavior
 
-The [outbox schema](../internal/store/outbox-v3.sql) preserves job identities, exact bytes, hashes, and publication acknowledgements.
+The [outbox schema](../internal/store/outbox-v3.sql) keeps job identities, exact bytes, hashes, and publication acknowledgments.
 Triggers prevent content changes, deletion, and resetting an acknowledged delivery.
 Pending jobs remain durable after command errors or process exits.
 The publisher acknowledges a file only after synchronizing its contents and directory.
 
 | Interruption point | Next invocation |
 | --- | --- |
-| Before the request transaction commits | No request, execution, or job is accepted; repeat the submission. |
+| Before the request transaction commits | No request, execution, or job is accepted. Repeat the submission. |
 | After commit, before publication | Publish the pending saved bytes with their original identifiers. |
 | During temporary-file writing | Ignore the incomplete `.tmp` file and publish a complete new temporary file. |
-| After final rename, before acknowledgement | Compare existing bytes, synchronize them, and record delivery without replacing the file. |
-| After acknowledgement or confirmation-output failure | Inspect `outbox show`; an acknowledged job is not sent again. |
+| After final rename, before acknowledgment | Compare existing bytes, synchronize them, and record delivery without replacing the file. |
+| After acknowledgment or confirmation-output failure | Inspect `outbox show`. An acknowledged job is not sent again. |
 
 Prerequisites: installed Go dependencies and the supported local filesystem described above.
 From the repository root, run the interruption tests:
@@ -166,18 +167,18 @@ go test ./internal/store -run TestOutboxProcessExitRecovery -count=1
 ```
 
 The tests use isolated child processes and temporary databases, and remove their temporary files automatically.
-They exit during saving, immediately after commit, and after publication before acknowledgement.
-Expect exit code `0` and preserved execution identifiers and job bytes after recovery.
+They exit during saving, immediately after commit, and after publication before acknowledgment.
+Expect exit code `0` and kept execution identifiers and job bytes after recovery.
 
 Existing different bytes are a conflict, including formatting-only changes.
-Publication stops with exit code `1`, leaving that job pending; earlier acknowledgements remain committed.
+Publication stops with exit code `1`, leaving that job pending. Earlier acknowledgments remain committed.
 Resolve the conflicting file's ownership before retrying the same publication command.
-Do not edit saved jobs, reset acknowledgements, or remove accepted exchange files to retry execution.
+Do not edit saved jobs, reset acknowledgments, or remove accepted exchange files to retry execution.
 
 ## Storage and operating limits
 
 Use a dedicated local exchange on macOS or Linux with exclusive rename and directory synchronization support.
-Linux uses `renameat2` with `RENAME_NOREPLACE`; macOS uses `renameatx_np` with `RENAME_EXCL`.
+Linux uses `renameat2` with `RENAME_NOREPLACE`. MacOS uses `renameatx_np` with `RENAME_EXCL`.
 Unsupported filesystems fail publication rather than falling back to an overwriting rename.
 Do not use network filesystems or move, replace, or delete the exchange while commands use it.
 
@@ -188,14 +189,15 @@ Directory descriptors contain file operations within the opened exchange.
 Different processes can publish identical bytes concurrently without replacing a winner.
 
 The first publication binds the database to one resolved absolute exchange path, including an empty publication batch.
-Aliases resolving to that path are accepted; a different path is rejected before job publication.
+Aliases resolving to that path are accepted. A different path is rejected before job publication.
 Preserve the database and exchange together until deliberate cleanup.
-Acknowledged files are immutable retained records; this slice provides no relocation, deletion repair, or retention service.
+Acknowledged files are immutable kept records. There is no relocation, deletion repair, or retention service.
 
-Each publication handles at most `--limit` pending jobs; the default is `100` and the maximum is `1000`.
+Each publication handles at most `--limit` pending jobs. The default is `100` and the maximum is `1000`.
 Repeat the command while `pending` is nonzero.
 The 30-second command deadline and three-second SQLite lock wait also apply.
-Each job is limited to one mebibyte; the outbox retains at most 10,000 jobs and 64 mebibytes.
+
+Each job is limited to one mebibyte. The outbox keeps at most 10,000 jobs and 64 mebibytes.
 Published jobs count toward those limits because their original bytes remain stored.
 Exceeding a storage limit rolls back the request that would exceed it.
 
@@ -205,7 +207,7 @@ Stop older commands and back up the database before upgrading.
 
 The migration queues compatible executions from existing snapshots without consulting edited catalog definitions.
 A corrupt snapshot or incompatible ready snapshot fails the upgrade and leaves the old schema intact.
-Read-only catalog and request commands preserve supported older versions; `outbox show` requires version `3` or `4`.
+Read-only catalog and request commands keep supported older versions.  `outbox show` requires version `3` or later.
 Unknown database versions remain rejected.
 
 ## Clean up the walkthrough
@@ -222,13 +224,13 @@ make clean
 
 Remove only the temporary directory created by this walkthrough.
 This removes its catalog, outbox, job copies, and any optional execution output.
-`make clean` removes generated builds while preserving other databases and exchanges.
+`make clean` removes generated builds while keeping other databases and exchanges.
 Source files and installed dependencies remain available.
 
 ## Publish new scoring jobs
 
 [Reanalysis](reanalysis.md) saves analysis jobs in this same outbox after validating every original recording.
-Publication retains the same destination, byte checks, and recovery rules.
+Publication keeps the same destination, byte checks, and recovery rules.
 Each analysis job supplies a pinned bag reference and complete scoring template.
 Equivalent scoring content reuses the original job or an existing analysis job.
 The publisher does not launch simulation or analysis workers.

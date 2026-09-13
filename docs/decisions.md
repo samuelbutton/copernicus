@@ -10,13 +10,13 @@ They require no account, remote scheduler, or shared analytical service.
 A team budget measures simulation ticks, not money or elapsed time.
 Admission reserves each ready execution's `max_ticks` from its frozen run template.
 Shared suite members count once because request resolution removes duplicate tests.
-The repeat number identifies one run; it does not multiply its cost.
+The repeat number identifies one run. It does not multiply its cost.
 A resolution failure has no simulation job and reserves zero ticks.
 
 The default team is `local` when `team_id` is omitted.
 Its initial cumulative allowance comes from [DefaultTickLimit](../internal/store/budgets.go).
 Other teams require an explicit budget before request creation.
-Team labels organize local work; they provide no authentication or access control.
+Team labels organize local work. They provide no authentication or access control.
 
 A request, its budget reservation, its executions, and its outgoing jobs commit together.
 An insufficient budget rejects the complete transaction before dispatch.
@@ -80,7 +80,7 @@ The key includes the following fields:
 [CacheInputs](../internal/comparison/view.go) owns the complete identity format.
 The key uses a sorted comparison plan, so map iteration cannot change its value.
 Both requests must be complete before a page can be saved or reused.
-Terminal failures and errors remain visible; completeness does not imply passing tests.
+Terminal failures and errors remain visible. Completeness does not imply passing tests.
 An incomplete request bypasses storage even when a filter hides its missing tests.
 
 Every comparison first revalidates the selected results and supporting recordings.
@@ -97,7 +97,7 @@ Browser text distinguishes reused, newly saved, and partial live comparisons.
 
 `view.cache_state` reports `saved`, `hit`, `read_only`, or `bypass_partial`.
 `view.cache_key` identifies eligible terminal inputs.
-The cache retains immutable entries until bounded FIFO eviction removes the oldest entries.
+The cache keeps immutable entries until bounded FIFO eviction removes the oldest entries.
 Storage is limited to 128 pages and 32 MiB of combined input and result JSON.
 Eviction does not change requests, budget reservations, analysis selections, or published files.
 
@@ -156,14 +156,15 @@ Changing a filter, order, cursor, page size, or selected analysis requires a dif
 
 Filters select all groups, metric regressions, incomplete groups, incompatible groups, or execution errors.
 A regression filter selects any group containing a metric labeled `REGRESSION`.
-All report counts retain the complete unfiltered denominator.
-`view.matched_rows` counts filtered groups before pagination; `rows` contains only the requested page.
+All report counts keep the complete unfiltered denominator.
+`view.matched_rows` counts filtered groups before pagination.  `rows` contains only the requested page.
 
-Sort `id` orders stable group identifiers ascending; `id-desc` reverses that order.
+Sort `id` orders stable group identifiers ascending.  `id-desc` reverses that order.
 Use the returned `view.next_after` as `--after` for the next CLI page.
 The HTTP API uses the same `filter`, `sort`, `after`, and `limit` parameters.
-Unknown options are rejected; they cannot become SQL fragments.
-The API limits pages to 100 groups; the CLI supports up to 2000.
+
+Unknown options are rejected. They cannot become SQL fragments.
+The API limits pages to 100 groups. The CLI supports up to 2000.
 
 Prerequisites: the completed results above, a modern browser, and an available port `8080`.
 From the same shell and repository root, run:
@@ -184,8 +185,8 @@ Open [the local interface](http://127.0.0.1:8080/).
 6. Open an execution and select **Back to comparison**.
 
 The comparison identifies saved-page reuse after reload.
-Its links retain the filter, order, page size, cursor, and both analysis selections.
-Budget rejection preserves the creation form's entries for retry.
+Its links keep the filter, order, page size, cursor, and both analysis selections.
+Budget rejection keeps the creation form's entries for retry.
 Changing budget limits remains an explicit CLI operation.
 
 ## Why keep this local

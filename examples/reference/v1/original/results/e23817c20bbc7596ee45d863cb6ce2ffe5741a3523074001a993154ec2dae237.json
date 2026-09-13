@@ -1,0 +1,65 @@
+{
+  "contract_version": 1,
+  "kind": "result",
+  "execution_id": "e7bc66155a884fcff9dd4acf6740637fff89559cb1ff64d234a136ddab6c8c74",
+  "job_id": "j5e5a6be641d465e8fb0ea482cb8665b2998c3264df30d688f94a0d4c0801e66",
+  "attempt_id": "queue-t3ta4xrh73oht374wglngmdsm7",
+  "correlation_id": "demo-baseline",
+  "job": {
+    "path": "jobs/j5e5a6be641d465e8fb0ea482cb8665b2998c3264df30d688f94a0d4c0801e66.json",
+    "sha256": "53b7b2e692eac4ac2800f3ec452dbfbb155adfcc2cd7f210e15a95b4c66f4acd"
+  },
+  "inputs_hash": "d36df65df810c3049ec0d5b623b693f91f123e5690c3bb5f6959604f9535d580",
+  "bag": {
+    "path": "bags/e7bc66155a884fcff9dd4acf6740637fff89559cb1ff64d234a136ddab6c8c74.jsonl",
+    "sha256": "aaea494a1c8f1291ef49e2fc60777ff679938856f0afd1ae9bbbba9f1c1ea067"
+  },
+  "analysis_id": "e23817c20bbc7596ee45d863cb6ce2ffe5741a3523074001a993154ec2dae237",
+  "analysis_template": {
+    "collision_count": {
+      "version": 1,
+      "maximum": 0
+    },
+    "goal_progress": {
+      "version": 1,
+      "minimum_ppm": 1000000
+    },
+    "minimum_obstacle_gap": {
+      "version": 1,
+      "minimum_mm": 0
+    }
+  },
+  "analysis_hash": "ffdad3aaa902cc86958945a1f1ac0be8d7ca25355f4f409f771f6aa808047d07",
+  "status": "FAIL",
+  "failure_class": null,
+  "timing": {
+    "duration_ms": 203
+  },
+  "metrics": {
+    "collision_count": {
+      "value": 0,
+      "version": 1,
+      "unit": "count",
+      "pass": true,
+      "evidence_ticks": []
+    },
+    "goal_progress": {
+      "value": 300000,
+      "version": 1,
+      "unit": "ppm",
+      "pass": false,
+      "evidence_ticks": [
+        31
+      ]
+    },
+    "minimum_obstacle_gap": {
+      "value": 7000,
+      "version": 1,
+      "unit": "mm",
+      "pass": true,
+      "evidence_ticks": [
+        30
+      ]
+    }
+  }
+}

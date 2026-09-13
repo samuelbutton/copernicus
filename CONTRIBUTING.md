@@ -37,16 +37,16 @@ The check verifies formatting, types, lint rules, Go tests, static checks, and b
 Expect exit code `0`.
 Keep tests focused on observable behavior, including invalid arguments and output failures.
 
-For interface changes, run the README preview and check keyboard focus, narrow screens, and browser errors.
+For interface changes, run the [review server](README.md#review-the-demo) and check keyboard focus, narrow screens, and browser errors.
 Check the built page without external network access after loading its local assets.
 Record tested operating-system and tool versions with the change.
-Stop the preview, then clean up from the repository root:
+Stop the review server, then clean up from the repository root:
 
 ```sh
 make clean
 ```
 
-The command removes generated builds and preserves source files and installed dependencies.
+The command removes generated builds and keeps source files and installed dependencies.
 
 ## Public names
 
@@ -58,3 +58,18 @@ Preserve required repository coordinates, license notices, and dependency attrib
 Do not include former employer names, private system names, aliases, private source notes, or private links.
 Apply this rule to code, comments, filenames, test data, output, documents, and publication text.
 Review direct and indirect references before publication.
+
+## Verify the complete walkthrough
+
+Prerequisites: the [full verification setup](README.md#verify-and-clean-up), including the pinned engine source and Chromium.
+From the repository root, run:
+
+```sh
+make verify YAMATA_SOURCE=../yamata
+```
+
+Expect successful contract, reference, command, browser, and cleanup checks.
+Temporary verification state is removed automatically.
+The [reference guide](examples/reference/README.md) explains deliberate fixture regeneration.
+Review command meaning and terminology manually after `make check-docs`. Its mechanical checks cannot prove STE compliance.
+Run `make clean` after stopping any review server to remove generated builds.

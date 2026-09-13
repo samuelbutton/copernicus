@@ -38,7 +38,7 @@ An occupied port causes startup failure.
 Use the printed address, including its numeric host and port.
 
 The `--web-dir` option enables request and analysis creation and opens the local database for writes.
-Without that option, `serve` retains its read-only API mode.
+Without that option, `serve` keeps its read-only API mode.
 Both modes reject foreign browser origins and unexpected hostnames.
 The interface uses local assets and makes no external requests.
 
@@ -54,7 +54,7 @@ The interface uses local assets and makes no external requests.
 Expect the saved request page with zero of three tests completed.
 Shared suite members produce only one test execution.
 The page includes every selected test, including unresolved or incomplete tests.
-Suite selection affects this request; it does not edit the catalog.
+Suite selection affects this request. It does not edit the catalog.
 
 Select **Create another request**.
 Repeat the steps with name `candidate-review` and braking rule `candidate`.
@@ -62,7 +62,7 @@ Keep the same suites and default seed.
 Expect another saved request with three incomplete tests.
 
 Drafts survive reloads and navigation within the same browser tab.
-A failed submission preserves your entries.
+A failed submission keeps your entries.
 Retrying the same name and inputs returns the saved request without duplicating jobs.
 Different inputs require a new request name.
 
@@ -83,7 +83,7 @@ yamata workers --exchange-dir "$review_dir/exchange" --drain
 
 Expect exit code `0` from each command.
 The open request page updates after import, showing three of three completed tests.
-Completion includes failed tests, warnings, and execution errors; it does not mean every test passed.
+Completion includes failed tests, warnings, and execution errors. It does not mean every test passed.
 The browser checks for updates every five seconds while visible.
 Publication, workers, and result import remain separate command-line operations.
 
@@ -106,7 +106,7 @@ Expand **Scenario**, **Braking rule**, or **Original score limits** to inspect t
 **Result identity** exposes the selected result and recording hashes.
 
 Select **Back to comparison** to restore the selected requests, scoring configurations, and page.
-The address preserves the selected request, execution, comparison page, and evidence tick.
+The address keeps the selected request, execution, comparison page, and evidence tick.
 Reloading a review link opens that same selection.
 Comparison counts always cover all groups, including groups on other pages.
 
@@ -114,7 +114,7 @@ Comparison counts always cover all groups, including groups on other pages.
 
 An incomplete request remains comparable, but missing outcomes never become zero-valued scores.
 Added, removed, incompatible, incomplete, and error groups stay visible.
-Unavailable measurements retain their label.
+Unavailable measurements keep their label.
 The [comparison guide](comparisons.md#matching-and-row-types) explains each classification.
 
 If a result or supporting recording changes or disappears, the next read removes its measured scores.
@@ -153,7 +153,7 @@ Expect successful Go, TypeScript, formatting, and browser checks.
 The browser tests cover real execution, suite selection, draft recovery, partial results, evidence, missing recordings, keyboard use, and accessibility.
 They create temporary databases and exchanges, then remove them after stopping their servers.
 Screenshots and failure output stay under ignored `web/test-results/`.
-Missing `YAMATA_BIN` fails the real-execution test; it never substitutes invented results.
+Missing `YAMATA_BIN` fails the real-execution test. It never substitutes invented results.
 
 ## Stop and clean up
 
@@ -170,7 +170,7 @@ make clean
 
 Expect graceful shutdown and exit code `0`.
 Cleanup removes this walkthrough's database, exchange, logs, and generated builds.
-It preserves source files and installed dependencies.
+It keeps source files and installed dependencies.
 To remove test output, run `rm -rf web/test-results web/playwright-report` from the repository root.
 
 Follow the [reanalysis guide](reanalysis.md) to request new scores and choose saved analyses independently on each comparison side.

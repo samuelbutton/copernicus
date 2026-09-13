@@ -22,7 +22,7 @@ flowchart TD
 The [example catalog](../examples/catalog.json) contains the complete definitions.
 Its scenarios describe an empty lane, a stopped obstacle, and a moving obstacle.
 Its controller references identify `baseline` and `candidate`, each at version `1`.
-A test does not select a controller; a later request will select one for its tests.
+A test does not select a controller. A request selects one for its tests.
 
 ## Import and inspect the example
 
@@ -40,9 +40,9 @@ catalog_dir=$(mktemp -d)
 
 Import prints `Catalog imported.` after the transaction commits.
 Show prints all stored definitions as JSON, sorted by identifier within each section.
-Membership arrays retain their declared order.
+Membership arrays keep their declared order.
 Expand prints three test objects, ordered as `stopped-obstacle`, `empty-lane`, and `moving-obstacle`.
-Each object retains its scenario, run-template, and analysis-template references.
+Each object keeps its scenario, run-template, and analysis-template references.
 
 The shared `stopped-obstacle` test appears once, at its first occurrence.
 Expansion visits suites in collection order, then tests in suite order.
@@ -71,7 +71,7 @@ make clean
 ```
 
 These commands remove the temporary catalog and generated builds.
-They preserve source files and installed dependencies.
+They keep source files and installed dependencies.
 `make clean` alone never removes catalog databases.
 Stop all commands using a catalog before removing its database.
 
@@ -81,22 +81,23 @@ The import file contains one UTF-8 JSON object with `version` set to `1`.
 The [model types](../internal/catalog/model.go) own the fields and value rules.
 The example file shows every supported record type.
 Omitted top-level sections mean no additions of that type.
-Omitted numeric fields default to zero; validation still requires positive versions, lengths, and run limits.
+Omitted numeric fields default to zero. Validation still requires positive versions, lengths, and run limits.
 
 | Section | Stored meaning |
 | --- | --- |
 | `scenarios` | Initial position, speed, goal, vehicle length, type, and obstacle geometry. |
-| `controllers` | Named controller implementations and versions; no executable paths or commands. |
+| `controllers` | Named controller implementations and versions. No executable paths or commands. |
 | `run_templates` | Accepted scenario type, simulator reference, tick duration, tick limit, and timeout. |
 | `analysis_templates` | Metric versions and limits for collisions, obstacle gap, and goal progress. |
 | `tests` | References to one scenario, one run template, and one analysis template. |
 | `suites` | Ordered test identifiers. |
 | `collections` | Ordered suite identifiers. |
 
-Positions and lengths use millimeters; speeds use millimeters per second.
+Positions and lengths use millimeters. Speeds use millimeters per second.
 Durations use milliseconds.
 Goal progress uses parts per million, from zero through one million.
-Scenario positions and speeds must be nonnegative; the goal must follow the starting position.
+
+Scenario positions and speeds must be nonnegative. The goal must follow the starting position.
 An obstacle array is required, including an empty array when no obstacles exist.
 
 Identifiers start with a lowercase letter and contain up to 64 lowercase letters, digits, underscores, or hyphens.
@@ -113,14 +114,15 @@ These bounds protect the local inspection commands from unbounded reads.
 References may name existing records or records in the same import batch.
 The database checks references inside the transaction.
 A missing reference rejects the entire batch, including definitions inserted earlier in that transaction.
-Imports add records; they do not replace existing definitions.
+
+Imports add records. They do not replace existing definitions.
 Use new identifiers for revised definitions in this version.
 The [suite-edit command](requests.md#create-a-request-and-change-a-suite) can change an existing suite’s membership without replacing test definitions.
 
 Catalog validation checks definition values and relationships.
 It does not verify that an execution engine supports every named implementation or that a scenario matches a selected run template.
 [Request resolution](requests.md#resolution-and-persistence) checks the pinned example before saving execution readiness.
-The future execution adapter will also validate complete jobs before dispatch.
+The execution adapter also validates complete jobs before dispatch.
 Importing or expanding a catalog never starts a simulation, creates a request, or calculates a score.
 
 ## Storage and failure behavior
@@ -133,7 +135,7 @@ A process exit before commit leaves no accepted partial batch.
 The database parent directory must already exist.
 New database files use owner-only permissions.
 Commands reject database and import-file symbolic links and nonregular files.
-Use a directory controlled by your account; concurrent replacement of directory entries is outside this local tool's scope.
+Use a directory controlled by your account. Concurrent replacement of directory entries is outside this local tool's scope.
 The database path is treated as a filesystem path, including spaces and URI punctuation.
 
 Inspection opens SQLite in read-only mode and does not initialize a missing database.

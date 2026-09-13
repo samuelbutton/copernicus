@@ -1,7 +1,7 @@
 # Compare two requests
 
 A comparison shows which measured values changed between two saved requests.
-It preserves missing tests, missing results, and incompatible scoring rules.
+It keeps missing tests, missing results, and incompatible scoring rules.
 A numerical improvement does not erase a collision or an execution error.
 
 ## Install the query tool
@@ -61,9 +61,9 @@ Its collision count changes from zero to one, with delta `1` and change `REGRESS
 
 The baseline can fail another score limit without colliding.
 Compare individual metrics as well as overall statuses.
-The output preserves each selected result path, file hash, and analysis identifier.
+The output keeps each selected result path, file hash, and analysis identifier.
 It also identifies both frozen snapshots and controller hashes.
-Exit code `0` means comparison succeeded; it does not mean the candidate passed.
+Exit code `0` means comparison succeeded. It does not mean the candidate passed.
 
 ## Check equal outcomes and changed membership
 
@@ -81,7 +81,8 @@ cmp "$compare_dir/baseline.json" "$compare_dir/baseline-after.json"
 ```
 
 The self-comparison has zero deltas for available values and zero status changes.
-Unavailable values remain unavailable; null never becomes zero.
+Unavailable values remain unavailable. Null never becomes zero.
+
 The smaller request selects two tests and has no execution results yet.
 Comparison reports one `REMOVED` row and two `INCOMPLETE` rows.
 Reversing the sides reports one `ADDED` row instead.
@@ -94,7 +95,7 @@ The analysis name is its frozen catalog identifier.
 Controller content, test labels, scenario labels, suite order, and collection labels do not determine pairing.
 Changing a matching field produces unmatched rows instead of a numerical delta.
 
-Each matching group retains all its selected executions.
+Each matching group keeps all its selected executions.
 If either side contains several executions with the same key, the row is `INCOMPARABLE` with reason `AMBIGUOUS_PAIRING`.
 Copernicus does not choose an arbitrary pair or multiply matches.
 Otherwise, matching rows require identical analysis content before scores can be compared.
@@ -102,10 +103,10 @@ Metric versions and units must also agree.
 
 | Row type | Example and meaning |
 | --- | --- |
-| `COMPARED` | Both selected analyses are readable and compatible; metric deltas are available where both values exist. |
+| `COMPARED` | Both selected analyses are readable and compatible. Metric deltas are available where both values exist. |
 | `INCOMPARABLE` | The same analysis name has different content, a metric version or unit differs, or pairing is ambiguous. |
 | `INCOMPLETE` | A matched execution has no validated result, including resolution failures and changed or missing supporting files. |
-| `ERROR` | Matched compatible selections include a validated execution error; no metric delta is calculated. |
+| `ERROR` | Matched compatible selections include a validated execution error. No metric delta is calculated. |
 | `ADDED` | Only the candidate selected this matching key. |
 | `REMOVED` | Only the baseline selected this matching key. |
 
@@ -118,15 +119,15 @@ The content-conflict guard also protects selected reanalyses and independently c
 ## Deltas and denominators
 
 A delta is the candidate value minus the baseline value, in the stated unit.
-More collisions are worse; less obstacle gap or goal progress is worse.
+More collisions are worse. Less obstacle gap or goal progress is worse.
 Metric changes are `REGRESSION`, `IMPROVEMENT`, `UNCHANGED`, or `UNAVAILABLE`.
-Each metric preserves the two original pass flags.
+Each metric keeps the two original pass flags.
 An unavailable value has a null delta and never counts as an unchanged zero.
 
 `status_changed` compares overall statuses for `COMPARED` rows only.
 It is null for other row types.
 A row can contain both an improved metric and a regressed metric.
-The report does not collapse those changes into a safety judgement or causal explanation.
+The report does not collapse those changes into a safety judgment or causal explanation.
 
 | Count | Denominator |
 | --- | --- |
@@ -158,7 +159,7 @@ From the repository root, run this inspection query in the temporary directory:
 ```
 
 Expect six result rows with their execution identifiers, statuses, and collision counts.
-This direct query inspects files; it does not perform Copernicus's validation or pairing checks.
+This direct query inspects files. It does not perform Copernicus's validation or pairing checks.
 The application uses the [delta query](../internal/comparison/deltas.sql) only after validating the exact selected outcomes.
 The [query runner](../internal/comparison/duckdb.go) creates private temporary copies, then restricts DuckDB to those files.
 
@@ -176,22 +177,22 @@ curl --fail 'http://127.0.0.1:8080/api/comparisons?baseline=baseline-one&candida
 
 The response contains `comparison` and, when needed, `next_after`.
 Pass the cursor as `after` with the same baseline and candidate identifiers.
-The page contains at most `limit` rows; all counts describe the complete comparison.
+The page contains at most `limit` rows. All counts describe the complete comparison.
 The default limit is 50 and the maximum is 100.
-Every page recalculates current availability; this is not a saved comparison.
+Every page checks current availability before calculating or reusing a [saved comparison](decisions.md#comparison-identity-and-freshness).
 
 ## Limits, failures, and cleanup
 
-Comparison defaults to read-only SQLite; `--save` enables terminal-page storage and schema upgrades.
+Comparison defaults to read-only SQLite.  `--save` enables terminal-page storage and schema upgrades.
 It reads only indexed outcomes assigned to the exact selected jobs.
 Missing, changed, or unreadable supporting files become incomplete before querying.
 Saved results cannot supply a passing outcome when its supporting files are unavailable.
 
 Selected result copies are limited to 64 mebibytes across both sides.
 DuckDB uses one thread, a 128-megabyte memory setting, no disk spill, and a ten-second deadline.
-The CLI keeps its 30-second overall deadline; HTTP keeps its 15-second deadline.
+The CLI keeps its 30-second overall deadline. HTTP keeps its 15-second deadline.
 The HTTP server permits one active comparison and returns `429` for another concurrent comparison.
-Other result reads retain their existing limits.
+Other result reads keep their existing limits.
 
 The query process ignores user startup configuration and receives no inherited credentials or extension configuration.
 Automatic extension installation and loading are disabled.
@@ -202,7 +203,7 @@ Forced process termination can leave a `copernicus-comparison-*` directory under
 An absent or wrong DuckDB version returns a command error when metrics require querying.
 Incomplete comparisons with no comparable pairs need no query process.
 Query failures return no partial metric report.
-HTTP returns a bounded generic error; the CLI retains the local cause.
+HTTP returns a bounded generic error. The CLI keeps the local cause.
 
 Prerequisites for cleanup: the same shell variables and completed HTTP procedure.
 From the repository root, run:
@@ -217,18 +218,18 @@ make clean
 
 Expect exit code `0` and graceful server shutdown.
 Cleanup removes this walkthrough's database, exchange, reports, and generated application builds.
-It preserves source files, installed dependencies, and unrelated databases.
+It keeps source files, installed dependencies, and unrelated databases.
 
 ## Choose the scores on each side
 
 `--baseline-analysis ID` and `--candidate-analysis ID` select saved analyses independently.
 Both default to `original`.
 The equivalent HTTP parameters are `baseline_analysis` and `candidate_analysis`.
-The browser exposes both choices and preserves them in review and pagination links.
+The browser exposes both choices and keeps them in review and pagination links.
 
 Pairing uses each test's original frozen analysis name.
 Selected template content then determines scoring compatibility.
-Changing one side to a different template makes matching rows incomparable; matching both sides restores compatible deltas.
+Changing one side to a different template makes matching rows incomparable. Matching both sides restores compatible deltas.
 An unknown selection fails explicitly, including when both sides use the same request.
 Follow the [reanalysis procedure](reanalysis.md) for commands, expected outcomes, and cleanup.
 
