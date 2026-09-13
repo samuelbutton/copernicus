@@ -28,7 +28,7 @@ Usage:
   copernicus results rebuild --db PATH --exchange-dir PATH
   copernicus results show --db PATH [--after CURSOR] [--limit 1..100]
   copernicus compare --db PATH --baseline ID --candidate ID [--duckdb PATH]
-  copernicus serve --db PATH [--port PORT] [--duckdb PATH]
+  copernicus serve --db PATH [--port PORT] [--duckdb PATH] [--web-dir PATH]
   copernicus outbox show --db PATH
   copernicus outbox publish --db PATH --exchange-dir PATH [--limit 1..1000]
 
@@ -41,6 +41,7 @@ Publication does not start workers or import results.
 Result import validates public files and records repeat-safe progress.
 Compare reads selected outcomes through DuckDB; its default path is bin/duckdb.
 Serve exposes a read-only HTTP API on 127.0.0.1.
+Adding --web-dir web/dist serves the review interface and enables request creation.
 See docs/lifecycle.md for completion checks and index recovery.
 `
 

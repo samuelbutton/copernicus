@@ -1,7 +1,9 @@
 package exchange
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -244,4 +246,21 @@ func (r *Reader) result(ctx context.Context, path string, identities map[string]
 	identities["outcome/"+out.Result.JobID] = out.SHA256
 	identities["path/"+path] = out.SHA256
 	return out, nil
+}
+
+// Tick returns one cited record after checking the recording's exact bytes.
+func (r *Reader) Tick(ctx context.Context, ref compatibility.Reference, tick int) (json.RawMessage, error) {
+	data, err := r.referenced(ctx, ref, "bag", map[string]string{})
+	if err != nil {
+		return nil, err
+	}
+	header, err := compatibility.ParseBag(ctx, data)
+	if err != nil {
+		return nil, err
+	}
+	if tick < 0 || tick >= header.RecordCount {
+		return nil, errors.New("tick outside recording")
+	}
+	lines := bytes.Split(data, []byte("\n"))
+	return json.RawMessage(lines[tick+1]), nil
 }

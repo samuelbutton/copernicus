@@ -19,6 +19,7 @@ func runServe(ctx context.Context, args []string, output io.Writer) (err error) 
 	flags.SetOutput(io.Discard)
 	dbPath := flags.String("db", "", "existing database path")
 	duckdb := flags.String("duckdb", "bin/duckdb", "DuckDB executable")
+	webDir := flags.String("web-dir", "", "built web interface; enables request creation")
 	port := flags.Int("port", 8080, "loopback port")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -31,7 +32,7 @@ func runServe(ctx context.Context, args []string, output io.Writer) (err error) 
 		return errors.New("provide --db PATH and --port 0–65535")
 	}
 	startup, cancel := context.WithTimeout(ctx, 5*time.Second)
-	db, err := store.Open(startup, *dbPath, false)
+	db, err := store.Open(startup, *dbPath, *webDir != "")
 	if err != nil {
 		cancel()
 		return err
@@ -46,8 +47,17 @@ func runServe(ctx context.Context, args []string, output io.Writer) (err error) 
 	if err != nil {
 		return err
 	}
-	server := &http.Server{Handler: httpapi.Handler(db, listener.Addr().String(), *duckdb), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
-	if _, err := fmt.Fprintf(output, "Read-only API: http://%s\n", listener.Addr()); err != nil {
+	handler := httpapi.Handler(db, listener.Addr().String(), *duckdb)
+	label := "Read-only API"
+	if *webDir != "" {
+		handler, err = httpapi.ReviewHandler(db, listener.Addr().String(), *duckdb, *webDir)
+		if err != nil {
+			return errors.Join(err, listener.Close())
+		}
+		label = "Review interface"
+	}
+	server := &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
+	if _, err := fmt.Fprintf(output, "%s: http://%s\n", label, listener.Addr()); err != nil {
 		return errors.Join(err, listener.Close())
 	}
 	done := make(chan error, 1)

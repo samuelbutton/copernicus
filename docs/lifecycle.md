@@ -153,14 +153,17 @@ Pass that cursor as the URL-encoded `after` parameter to read the next page.
 | `/api/requests/{id}` | The original frozen request record. |
 | `/api/requests/{id}/status` | Completion counts and per-execution states. |
 | `/api/results` | Paged result references, assignment, and current availability. |
+| `/api/catalog` | Current catalog definitions for suite selection. |
+| `/api/requests/{id}/executions/{execution}` | Frozen inputs and freshly validated result metrics. |
+| `/api/requests/{id}/executions/{execution}/ticks/{tick}` | A recording tick cited by that result. |
 | `/api/index` | Stored event, result, and unassigned-result counts. |
 | `/api/comparisons` | [Request comparisons](comparisons.md#read-a-comparison-through-http), with explicit baseline and candidate identifiers. |
 
-The API accepts GET requests only and opens SQLite in read-only mode.
+Without `--web-dir`, the API accepts GET requests only and opens SQLite in read-only mode.
 It binds only `127.0.0.1`, rejects foreign Host or Origin values, and grants no cross-origin access.
 Use the printed address instead of a hostname alias.
-It serves JSON without browser controls, filesystem downloads, or request mutations.
-The static browser introduction remains separate until the review-interface slice.
+Add `--web-dir web/dist` to enable the [browser review interface](review-guide.md) and request creation.
+The review guide describes its origin checks and worker handoff.
 
 ## Completion counts
 

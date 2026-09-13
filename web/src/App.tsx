@@ -1,62 +1,90 @@
+import { useEffect, useRef } from "react";
+import { CreateRequest } from "./CreateRequest";
+import { Comparison } from "./Comparison";
+import { Execution } from "./Execution";
+import { Requests, RequestView } from "./Requests";
+import { useRoute, link } from "./navigation";
+import { id } from "./api";
 export function App() {
+  const route = useRoute(),
+    view = route.get("view") ?? "requests",
+    routeKey = route.toString();
+  const main = useRef<HTMLElement>(null);
+  useEffect(() => {
+    main.current?.focus();
+  }, [routeKey]);
+  const invalid = ["id", "execution", "baseline", "candidate"].some((key) => {
+    const value = route.get(key);
+    return value !== null && value !== "" && !id.safeParse(value).success;
+  });
   return (
     <>
-      <a className="skip-link" href="#main">
+      <a
+        className="skip-link"
+        href="#main"
+        onClick={(event) => {
+          event.preventDefault();
+          main.current?.focus();
+        }}
+      >
         Skip to content
       </a>
       <header className="page-header">
-        <span className="wordmark">Copernicus</span>
+        <a className="wordmark" href={link({ view: "requests" })}>
+          Copernicus
+        </a>
+        <nav aria-label="Main navigation">
+          <a
+            aria-current={
+              view === "requests" || view === "request" ? "page" : undefined
+            }
+            href={link({ view: "requests" })}
+          >
+            Requests
+          </a>
+          <a
+            aria-current={view === "compare" ? "page" : undefined}
+            href={link({ view: "compare" })}
+          >
+            Compare
+          </a>
+        </nav>
         <span className="eyebrow">Local simulation review</span>
       </header>
-      <main id="main" tabIndex={-1}>
-        <section className="intro" aria-labelledby="page-title">
-          <p className="eyebrow">A small experiment. A clearer result.</p>
-          <h1 id="page-title">Understand a driving test.</h1>
-          <p className="lead">
-            Explore how a vehicle’s braking decision changes what happens next.
-            Copernicus is a learning project for choosing tests and comparing
-            their results.
-          </p>
-          <a className="primary-link" href="#example">
-            Explore the example <span aria-hidden="true">↓</span>
-          </a>
-        </section>
-        <section
-          id="example"
-          className="example"
-          aria-labelledby="example-title"
-          tabIndex={-1}
-        >
-          <p className="eyebrow">The idea behind the project</p>
-          <h2 id="example-title">Same obstacle. Different braking.</h2>
-          <p>
-            A vehicle approaches a stopped obstacle. Two braking rules lead to
-            different outcomes.
-          </p>
-          <dl className="comparison">
-            <div>
-              <dt>Earlier braking</dt>
-              <dd>The vehicle stops before contact.</dd>
-            </div>
-            <div>
-              <dt>Later braking</dt>
-              <dd>The vehicle reaches the obstacle.</dd>
-            </div>
-          </dl>
-          <p className="muted">
-            This is an explanation of the example, not a loaded test result.
-          </p>
-        </section>
-        <aside className="availability" aria-labelledby="availability-title">
-          <h2 id="availability-title">What you can do today</h2>
-          <p>
-            Read this introduction and explore the command help. Test selection
-            and saved comparisons are not available yet.
-          </p>
-        </aside>
+      <main id="main" ref={main} tabIndex={-1}>
+        {invalid ? (
+          <>
+            <h1>Invalid review link</h1>
+            <p>
+              Return to <a href={link({ view: "requests" })}>your requests</a>{" "}
+              and choose a saved item.
+            </p>
+          </>
+        ) : view === "requests" ? (
+          <Requests />
+        ) : view === "create" ? (
+          <CreateRequest />
+        ) : view === "request" ? (
+          <RequestView key={routeKey} id={route.get("id") ?? ""} />
+        ) : view === "compare" ? (
+          <Comparison
+            key={routeKey}
+            baseline={route.get("baseline") ?? ""}
+            candidate={route.get("candidate") ?? ""}
+            after={route.get("after") ?? ""}
+          />
+        ) : view === "execution" ? (
+          <Execution route={route} />
+        ) : (
+          <>
+            <h1>Page unavailable</h1>
+            <a href={link({ view: "requests" })}>Return to requests</a>
+          </>
+        )}
       </main>
       <footer className="page-footer">
-        A learning example that runs on your own computer.
+        Synthetic driving tests on your own computer. Scores describe this
+        example, not real-world driving safety.
       </footer>
     </>
   );

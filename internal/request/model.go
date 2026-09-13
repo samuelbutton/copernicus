@@ -20,16 +20,21 @@ const (
 	Resolved         = "RESOLVED"
 )
 
+const MaxSubmissionBytes = 128 << 10
+
+var ErrInvalidSubmission = errors.New("invalid request selection")
+
 var ErrIdentityConflict = errors.New("request identifier already has a different submission")
 
 type Submission struct {
-	ID           string `json:"id"`
-	CollectionID string `json:"collection_id"`
-	ControllerID string `json:"controller_id"`
-	Requester    string `json:"requester"`
-	Priority     int    `json:"priority"`
-	Seed         int64  `json:"seed"`
-	Repeat       int    `json:"repeat"`
+	ID           string   `json:"id"`
+	SuiteIDs     []string `json:"suite_ids,omitempty"`
+	CollectionID string   `json:"collection_id"`
+	ControllerID string   `json:"controller_id"`
+	Requester    string   `json:"requester"`
+	Priority     int      `json:"priority"`
+	Seed         int64    `json:"seed"`
+	Repeat       int      `json:"repeat"`
 }
 
 func (s Submission) Validate() error {
@@ -40,6 +45,21 @@ func (s Submission) Validate() error {
 	}
 	if s.Priority < 0 || s.Priority > 3 || s.Seed < 0 || s.Seed > 9007199254740991 || s.Repeat < 0 || s.Repeat > 100000 {
 		return errors.New("priority must be 0–3, seed 0–9007199254740991, and repeat 0–100000")
+	}
+	if s.SuiteIDs != nil {
+		if len(s.SuiteIDs) == 0 || len(s.SuiteIDs) > MaxTests {
+			return errors.New("select 1–1000 suites")
+		}
+		seen := map[string]bool{}
+		for _, id := range s.SuiteIDs {
+			if err := catalog.ValidateID(id); err != nil {
+				return err
+			}
+			if seen[id] {
+				return errors.New("duplicate selected suite")
+			}
+			seen[id] = true
+		}
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-// Package httpapi exposes bounded read-only views of local request state.
+// Package httpapi exposes bounded views of local request state.
 package httpapi
 
 import (
@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/samuelbutton/copernicus/internal/catalog"
@@ -18,7 +19,38 @@ import (
 // Handler accepts only the actual loopback authority. It grants no cross-origin
 // access, accepts no mutations, and limits concurrent expensive file validation.
 func Handler(db *store.Store, authority, duckdb string) http.Handler {
+	return handler(db, authority, duckdb, nil)
+}
+
+func handler(db *store.Store, authority, duckdb string, assets map[string][]byte) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/api/requests/{id}/executions/{execution}/ticks/{tick}", func(w http.ResponseWriter, r *http.Request) {
+		tick, err := strconv.Atoi(r.PathValue("tick"))
+		if !validID(w, r) {
+			return
+		}
+		if catalog.ValidateID(r.PathValue("execution")) != nil || err != nil || tick < 0 || tick > 100000 {
+			failure(w, 400, "invalid evidence identifier")
+			return
+		}
+		result, err := db.Evidence(r.Context(), r.PathValue("id"), r.PathValue("execution"), tick)
+		send(w, result, err)
+	})
+	mux.HandleFunc("/api/catalog", func(w http.ResponseWriter, r *http.Request) {
+		result, err := db.Read(r.Context())
+		send(w, result, err)
+	})
+	mux.HandleFunc("/api/requests/{id}/executions/{execution}", func(w http.ResponseWriter, r *http.Request) {
+		if !validID(w, r) {
+			return
+		}
+		if catalog.ValidateID(r.PathValue("execution")) != nil {
+			failure(w, 400, "invalid execution identifier")
+			return
+		}
+		result, err := db.Review(r.Context(), r.PathValue("id"), r.PathValue("execution"))
+		send(w, result, err)
+	})
 	mux.HandleFunc("/api/comparisons", comparisonHandler(db, duckdb))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { send(w, map[string]string{"status": "live"}, nil) })
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
@@ -26,6 +58,10 @@ func Handler(db *store.Store, authority, duckdb string) http.Handler {
 		send(w, map[string]string{"status": "ready"}, err)
 	})
 	mux.HandleFunc("/api/requests", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			createRequest(db, w, r)
+			return
+		}
 		after, limit, ok := page(w, r)
 		if !ok {
 			return
@@ -63,7 +99,26 @@ func Handler(db *store.Store, authority, duckdb string) http.Handler {
 		result, err := db.IndexStatus(r.Context())
 		send(w, result, err)
 	})
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { failure(w, http.StatusNotFound, "not found") })
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if path == "/" {
+			path = "/index.html"
+		}
+		data, ok := assets[path]
+		if !ok {
+			failure(w, 404, "not found")
+			return
+		}
+		contentType := "text/html; charset=utf-8"
+		if strings.HasSuffix(path, ".js") {
+			contentType = "text/javascript; charset=utf-8"
+		}
+		if strings.HasSuffix(path, ".css") {
+			contentType = "text/css; charset=utf-8"
+		}
+		w.Header().Set("Content-Type", contentType)
+		_, _ = w.Write(data)
+	})
 	slots := make(chan struct{}, 8)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
@@ -73,12 +128,20 @@ func Handler(db *store.Store, authority, duckdb string) http.Handler {
 			failure(w, http.StatusForbidden, "local origin required")
 			return
 		}
-		if r.Method != http.MethodGet {
+		if assets != nil {
+			w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+		}
+		write := assets != nil && r.Method == http.MethodPost && r.URL.Path == "/api/requests"
+		if write && (r.Header.Get("Origin") != "http://"+authority || r.Header.Get("Content-Type") != "application/json" || r.Header.Get("X-Copernicus-Request") != "1") {
+			failure(w, http.StatusForbidden, "same-origin JSON request required")
+			return
+		}
+		if r.Method != http.MethodGet && !write {
 			w.Header().Set("Allow", "GET")
 			failure(w, http.StatusMethodNotAllowed, "read-only API")
 			return
 		}
-		if r.ContentLength != 0 || len(r.TransferEncoding) > 0 {
+		if !write && (r.ContentLength != 0 || len(r.TransferEncoding) > 0) {
 			failure(w, http.StatusBadRequest, "request bodies are not accepted")
 			return
 		}

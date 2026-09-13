@@ -4,10 +4,10 @@
 
 Copernicus is a learning project about choosing driving tests and understanding their results.
 Imagine checking two braking rules against the same obstacle: one stops the vehicle early, while the other brakes too late.
-The project will help a reviewer compare what happened and trace each result back to the test instructions.
+The project helps a reviewer compare what happened and trace each result back to the test instructions.
 
 You can import test definitions, organize them into groups, and inspect which tests a collection selects.
-A browser introduction explains the driving example.
+The browser lets you choose test groups, save requests, and inspect their results.
 You can save a request that preserves the selected instructions, even after a group changes.
 You can deliver the saved instructions as job files for Yamata to run.
 Delivery can resume after an interruption.
@@ -22,7 +22,7 @@ Copernicus separates test selection and review from simulation execution.
 The Go command imports validated test catalogs into SQLite and expands collections into ordered, unique tests.
 Request creation freezes those selections and their content hashes in one transaction.
 Help and catalog inspection start no background services.
-The React and TypeScript package builds a static introduction with Vite.
+The React and TypeScript package builds the review interface with Vite.
 Both packages build independently and require no other checkout.
 
 The outbox exchanges versioned job files with Yamata.
@@ -32,7 +32,8 @@ Compatible jobs commit with their request, then publish through a separate comma
 Publication does not start workers or import results.
 
 The result importer validates published files and maps exact accepted jobs back to requests.
-A read-only local HTTP API exposes snapshots, progress, and the result index.
+A local HTTP API exposes snapshots, progress, evidence, and the result index.
+Review-server mode also accepts repeat-safe request creation.
 DuckDB queries selected result files for compatible comparisons, with explicit missing and unmatched rows.
 
 ## Build and read the command help
@@ -98,25 +99,12 @@ The first procedure uses copied contract examples and requires no execution serv
 Follow the [comparison walkthrough](docs/comparisons.md) to inspect deltas, changed membership, completion counts, and the comparison API.
 It includes a direct DuckDB query and cleanup commands.
 
-## Open the browser introduction
+## Open the browser review interface
 
-Prerequisites: the installed web dependencies above and a modern browser.
-From the repository root, run:
-
-```sh
-make preview
-```
-
-Open [the local introduction](http://127.0.0.1:4173/) in your browser.
-Select **Explore the example** to read the two braking outcomes.
-The page labels them as an explanation, not loaded test results.
-It shows no request controls or invented progress.
-
-The preview serves built files on the loopback address only.
-It fails if port `4173` is occupied; it does not silently choose another port.
-It starts no simulation worker and sends no application data to another service.
-Stop the preview with `Ctrl+C` before cleanup.
-This preview is a development tool; a Go-served review interface belongs to later work.
+Follow the [review guide](docs/review-guide.md) to create both requests in the browser and compare real synthetic results.
+The guide includes server setup, worker commands, evidence inspection, keyboard controls, verification, and cleanup.
+Use `serve --web-dir web/dist` to serve the built interface and its API from one local address.
+`make preview` serves static assets only; review actions require the Go review server.
 
 ## Verify and clean up
 
@@ -138,8 +126,7 @@ To remove installed web dependencies separately, run `rm -rf web/node_modules` f
 
 Start with the [code tour](docs/code-tour.md), [glossary](docs/glossary.md), and [contribution guide](CONTRIBUTING.md).
 The [writing guide](docs/writing.md) defines the public documentation and naming rules.
-The command stores frozen requests; the browser introduction remains static.
-The interactive review interface belongs to later work.
+The browser reviews frozen inputs and freshly validated result evidence.
 
 ## License
 

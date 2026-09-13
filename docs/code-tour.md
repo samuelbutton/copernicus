@@ -1,9 +1,9 @@
 # Code tour
 
-The first version has two independent entry points: a Go command and a static browser introduction.
+The Go command and browser package build independently.
 The command manages a SQLite catalog, frozen requests, and outgoing job files.
-The browser introduction remains static.
-The command imports validated results and serves read-only request progress.
+The browser selects suites, creates requests, and reviews progress, comparisons, and cited evidence.
+The command imports validated results and serves the local review interface.
 
 | Path | Responsibility |
 | --- | --- |
@@ -30,7 +30,7 @@ The command imports validated results and serves read-only request progress.
 | [internal/store/results.go](../internal/store/results.go) | Imports events and results transactionally and rebuilds the derived index. |
 | [internal/store/results-v4.sql](../internal/store/results-v4.sql) | Preserves publication identities, accepted events, and result references. |
 | [internal/store/progress.go](../internal/store/progress.go) | Maps exact jobs to requests and revalidates results before counting completion. |
-| [internal/httpapi/api.go](../internal/httpapi/api.go) | Exposes bounded read-only JSON routes with local-origin checks. |
+| [internal/httpapi/api.go](../internal/httpapi/api.go) | Exposes bounded JSON routes with local-origin checks. |
 | [cmd/copernicus/serve.go](../cmd/copernicus/serve.go) | Owns loopback binding, HTTP timeouts, and graceful shutdown. |
 | [cmd/copernicus/results.go](../cmd/copernicus/results.go) | Imports, lists, and rebuilds the result index. |
 | [internal/comparison/model.go](../internal/comparison/model.go) | Pairs frozen selections and preserves complete denominators. |
@@ -46,7 +46,7 @@ The command imports validated results and serves read-only request progress.
 | [cmd/copernicus/main_test.go](../cmd/copernicus/main_test.go) | Checks help, rejected arguments, and output errors. |
 | [web/index.html](../web/index.html) | Defines the document, initial message, and local asset policy. |
 | [web/src/main.tsx](../web/src/main.tsx) | Mounts the React application. |
-| [web/src/App.tsx](../web/src/App.tsx) | Explains the driving example and the currently available actions. |
+| [web/src/App.tsx](../web/src/App.tsx) | Routes review views and manages navigation focus. |
 | [web/src/styles.css](../web/src/styles.css) | Owns semantic colors, spacing, type sizes, focus states, and responsive layout. |
 | [web/tsconfig.json](../web/tsconfig.json) | Requires strict browser-side type checking. |
 | [web/eslint.config.mjs](../web/eslint.config.mjs) | Checks typed source and React Hook rules. |
@@ -58,9 +58,8 @@ The command passes an output writer to its argument handler.
 Tests can observe help and writer failures without starting a child process.
 The actual binary reports failure with exit code `1`.
 
-The browser introduction uses local assets and no external fonts, analytics, or result service.
-Its example describes earlier and later braking without pretending to be a saved comparison.
-The [README procedure](../README.md#open-the-browser-introduction) explains how to build, open, and stop the preview.
+The browser validates response data with Zod and manages HTTP state with TanStack Query.
+The [review guide](review-guide.md) explains server startup and the complete browser workflow.
 
 The [test-model guide](test-model.md) explains catalog relationships, validation, failure behavior, and cleanup.
 
@@ -73,3 +72,14 @@ The [lifecycle guide](lifecycle.md) explains result validation, completion count
 
 The [comparison guide](comparisons.md) explains matching, metric deltas, unavailable values, and direct SQL inspection.
 The [comparison tests](../internal/comparison/comparison_test.go) cover equal values, regressions, content conflicts, metric conflicts, ambiguity, and denominators.
+
+| Review path | Responsibility |
+| --- | --- |
+| [internal/httpapi/review.go](../internal/httpapi/review.go) | Serves bounded built assets and validates same-origin request submissions. |
+| [internal/store/review.go](../internal/store/review.go) | Joins saved inputs with current results and restricts evidence to cited ticks. |
+| [web/src/api.ts](../web/src/api.ts) | Validates response contracts and owns query freshness and bounded request listing. |
+| [web/src/CreateRequest.tsx](../web/src/CreateRequest.tsx) | Preserves drafts and submits selected suites with repeat-safe identities. |
+| [web/src/Requests.tsx](../web/src/Requests.tsx) | Shows request history and complete progress denominators. |
+| [web/src/Comparison.tsx](../web/src/Comparison.tsx) | Presents both selections, metric deltas, and paged evidence links. |
+| [web/src/Execution.tsx](../web/src/Execution.tsx) | Displays immutable inputs and validated recording evidence. |
+| [web/e2e/review.spec.ts](../web/e2e/review.spec.ts) | Exercises the browser against temporary databases and the public engine CLI. |

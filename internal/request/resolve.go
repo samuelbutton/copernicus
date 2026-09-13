@@ -20,6 +20,31 @@ func Resolve(c catalog.Catalog, submission Submission, source compatibility.Sour
 	if err := c.Validate(); err != nil {
 		return out, err
 	}
+	// A selection narrows this request only; catalog memberships stay unchanged.
+	if submission.SuiteIDs != nil {
+		submission.SuiteIDs = append([]string{}, submission.SuiteIDs...)
+		c.Collections = append([]catalog.Collection{}, c.Collections...)
+		found := false
+		for i, collection := range c.Collections {
+			if collection.ID != submission.CollectionID {
+				continue
+			}
+			allowed := map[string]bool{}
+			for _, id := range collection.SuiteIDs {
+				allowed[id] = true
+			}
+			for _, id := range submission.SuiteIDs {
+				if !allowed[id] {
+					return out, fmt.Errorf("suite %q is not in collection", id)
+				}
+			}
+			c.Collections[i].SuiteIDs = append([]string{}, submission.SuiteIDs...)
+			found = true
+		}
+		if !found {
+			return out, fmt.Errorf("collection not found")
+		}
+	}
 	tests, err := c.Expand(submission.CollectionID)
 	if err != nil {
 		return out, err

@@ -21,7 +21,7 @@ const maxRequestBytes = 64 << 20
 func (s *Store) CreateRequest(ctx context.Context, input request.Submission, source compatibility.Source) (request.Record, error) {
 	var empty request.Record
 	if err := input.Validate(); err != nil {
-		return empty, err
+		return empty, fmt.Errorf("%w: %w", request.ErrInvalidSubmission, err)
 	}
 	submission, err := json.Marshal(input)
 	if err != nil {
@@ -48,7 +48,7 @@ func (s *Store) CreateRequest(ctx context.Context, input request.Submission, sou
 	}
 	snapshot, err := request.Resolve(c, input, source)
 	if err != nil {
-		return empty, err
+		return empty, fmt.Errorf("%w: %w", request.ErrInvalidSubmission, err)
 	}
 	record, err := request.Encode(snapshot)
 	if err != nil {
@@ -99,7 +99,7 @@ func readRequest(ctx context.Context, tx *sql.Tx, id string) (request.Record, []
 	var record request.Record
 	var submission, data string
 	// Bound data read even when a database was changed outside this application.
-	err := tx.QueryRowContext(ctx, "SELECT submission, submission_hash, snapshot, snapshot_hash FROM requests WHERE id = ? AND length(snapshot) <= ? AND length(submission) <= 1024", id, request.MaxSnapshotBytes).Scan(&submission, &record.SubmissionSHA256, &data, &record.SnapshotSHA256)
+	err := tx.QueryRowContext(ctx, "SELECT submission, submission_hash, snapshot, snapshot_hash FROM requests WHERE id = ? AND length(snapshot) <= ? AND length(submission) <= ?", id, request.MaxSnapshotBytes, request.MaxSubmissionBytes).Scan(&submission, &record.SubmissionSHA256, &data, &record.SnapshotSHA256)
 	if err != nil {
 		return record, nil, err
 	}

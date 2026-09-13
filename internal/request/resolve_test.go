@@ -256,3 +256,33 @@ func FuzzResolve(f *testing.F) {
 		}
 	})
 }
+
+func TestSelectedSuitesAreFrozenWithoutChangingCatalog(t *testing.T) {
+	c := fixture(t)
+	original, _ := json.Marshal(c)
+	input := submission()
+	input.SuiteIDs = []string{"smoke"}
+	snapshot := resolve(t, c, input)
+	if len(snapshot.Executions) != 2 || len(snapshot.Suites) != 1 || snapshot.Suites[0].ID != "smoke" {
+		t.Fatal("selection did not narrow request")
+	}
+	input.SuiteIDs[0] = "obstacles"
+	if snapshot.Submission.SuiteIDs[0] != "smoke" {
+		t.Fatal("submission aliases caller")
+	}
+	after, _ := json.Marshal(c)
+	if !bytes.Equal(original, after) {
+		t.Fatal("selection changed catalog")
+	}
+	for _, suites := range [][]string{{}, {"unknown"}, {"smoke", "smoke"}, {"../smoke"}} {
+		input.SuiteIDs = suites
+		source, _ := compatibility.Yamata()
+		if _, err := Resolve(c, input, source); err == nil {
+			t.Fatalf("accepted suites %v", suites)
+		}
+	}
+	legacy, _ := json.Marshal(submission())
+	if strings.Contains(string(legacy), "suite_ids") {
+		t.Fatal("changed legacy submission identity")
+	}
+}

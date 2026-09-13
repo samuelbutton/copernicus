@@ -97,7 +97,7 @@ Source files and installed dependencies remain available.
 The required fields are the request identifier, collection identifier, controller identifier, and requester identifier.
 These fields use the catalog's identifier rules.
 The requester is a local label; this example provides no authentication or authorization service.
-Optional fields are priority, seed, and repeat number.
+Optional CLI fields are priority, seed, and repeat number.
 Their defaults are `1`, `0`, and `0`.
 
 Priority ranges from `0` through `3`, with `0` highest.
@@ -185,3 +185,15 @@ If confirmation output fails after saving, the error explicitly says the request
 Use `request show` or repeat the identical submission to retrieve the accepted outcome.
 The [store tests](../internal/store/requests_test.go) verify transaction rollback, process exit, concurrent submissions, migration, and snapshot preservation.
 The [command tests](../cmd/copernicus/requests_test.go) verify the CLI workflow and output-failure recovery.
+
+## Browser suite selection
+
+The [review interface](review-guide.md) accepts an optional ordered `suite_ids` array in a submission.
+Every selected suite must belong to the selected collection.
+Empty arrays, duplicate identifiers, and unknown memberships are rejected.
+The snapshot freezes only the selected suites and their unique tests, preserving selection order.
+
+Omitting `suite_ids` selects the entire collection and preserves the earlier submission encoding.
+Selected suites participate in submission identity, so changing them requires a new request identifier.
+The browser sends priority `1`, repeat `0`, requester `reviewer`, and a visible editable seed.
+The HTTP boundary requires explicit scalar fields and limits the submission to 131,072 bytes.

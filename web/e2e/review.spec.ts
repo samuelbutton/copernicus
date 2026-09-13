@@ -1,0 +1,341 @@
+import { test as base, expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { execFile, spawn } from "node:child_process";
+import { promisify } from "node:util";
+import {
+  mkdtemp,
+  rm,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { resolve, join } from "node:path";
+import { z } from "zod";
+
+const run = promisify(execFile);
+const root = resolve(import.meta.dirname, "../..");
+const cli = join(root, "bin/copernicus");
+type App = {
+  url: string;
+  directory: string;
+  db: string;
+  exchange: string;
+  processJobs: () => Promise<void>;
+};
+const test = base.extend<{ app: App }>({
+  app: async ({ request }, provide) => {
+    const directory = await mkdtemp(join(tmpdir(), "copernicus-browser-")),
+      db = join(directory, "catalog.sqlite"),
+      exchange = join(directory, "exchange");
+    await mkdir(exchange);
+    await run(cli, [
+      "catalog",
+      "import",
+      "--db",
+      db,
+      "--file",
+      join(root, "examples/catalog.json"),
+    ]);
+    const server = spawn(
+      cli,
+      [
+        "serve",
+        "--db",
+        db,
+        "--web-dir",
+        join(root, "web/dist"),
+        "--duckdb",
+        join(root, "bin/duckdb"),
+        "--port",
+        "0",
+      ],
+      { cwd: root, stdio: ["ignore", "pipe", "pipe"] },
+    );
+    try {
+      const url = await new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error("Review server did not start")),
+          10000,
+        );
+        server.once("error", (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+        server.once("exit", () => {
+          clearTimeout(timeout);
+          reject(new Error("Review server exited"));
+        });
+        let output = "";
+        server.stdout.on("data", (data: Buffer) => {
+          output += data.toString();
+          const match = /http:\/\/127\.0\.0\.1:\d+/.exec(output);
+          if (match) {
+            clearTimeout(timeout);
+            resolve(match[0]);
+          }
+        });
+      });
+      expect((await request.get(url + "/readyz")).ok()).toBe(true);
+      await provide({
+        url,
+        directory,
+        db,
+        exchange,
+        processJobs: async () => {
+          const engine = process.env["YAMATA_BIN"];
+          if (!engine)
+            throw new Error(
+              "Set YAMATA_BIN to the executable built from compatibility/yamata.json",
+            );
+          await run(cli, [
+            "outbox",
+            "publish",
+            "--db",
+            db,
+            "--exchange-dir",
+            exchange,
+          ]);
+          for (const job of await readdir(join(exchange, "jobs")))
+            await run(engine, [
+              "enqueue",
+              "--exchange-dir",
+              exchange,
+              `jobs/${job}`,
+            ]);
+          await run(engine, ["workers", "--exchange-dir", exchange, "--drain"]);
+          await run(cli, [
+            "results",
+            "import",
+            "--db",
+            db,
+            "--exchange-dir",
+            exchange,
+          ]);
+        },
+      });
+    } finally {
+      if (server.exitCode === null) {
+        const ended = new Promise<void>((resolve) =>
+          server.once("exit", () => resolve()),
+        );
+        server.kill("SIGTERM");
+        await ended;
+      }
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
+});
+async function accessible(page: Page) {
+  const result = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(result.violations).toEqual([]);
+}
+async function create(
+  page: Page,
+  name: string,
+  controller: string,
+  suites = ["smoke"],
+) {
+  await page.goto(page.url().split("#")[0] + "#view=create");
+  await page.getByLabel("Request name").fill(name);
+  await page.getByLabel("Test collection").selectOption("all-tests");
+  for (const suite of suites)
+    await page.getByRole("checkbox", { name: new RegExp(`^${suite}`) }).check();
+  await page.getByLabel("Braking rule").selectOption(controller);
+  await page
+    .getByRole("button", { name: "Create request", exact: true })
+    .click();
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+}
+
+test("suite selection, draft recovery, keyboard navigation, and partial review", async ({
+  page,
+  app,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto(app.url);
+  await expect(
+    page.getByRole("heading", { name: "No requests yet" }),
+  ).toBeVisible();
+  await accessible(page);
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("link", { name: "Create request", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.getByLabel("Request name").fill("browser-baseline");
+  await page.getByLabel("Test collection").selectOption("all-tests");
+  await page.getByRole("checkbox", { name: /^smoke/ }).focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("checkbox", { name: /^smoke/ })).toBeChecked();
+  await page.getByLabel("Braking rule").selectOption("baseline");
+  await page.reload();
+  await expect(page.getByLabel("Request name")).toHaveValue("browser-baseline");
+  await expect(page.getByRole("checkbox", { name: /^smoke/ })).toBeChecked();
+  await accessible(page);
+  await page.route("**/api/requests", async (route) => {
+    if (route.request().method() === "POST")
+      await route.fulfill({ status: 503, json: { error: "unavailable" } });
+    else await route.continue();
+  });
+  await page
+    .getByRole("button", { name: "Create request", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Your entries are still available",
+  );
+  await expect(page.getByLabel("Request name")).toHaveValue("browser-baseline");
+  await page.unroute("**/api/requests");
+  await page
+    .getByRole("button", { name: "Create request", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "browser-baseline", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("0 of 2", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Partial results: 2/)).toBeVisible();
+  await accessible(page);
+  await create(page, "browser-candidate", "candidate");
+  await page.getByRole("link", { name: "Compare", exact: true }).click();
+  await page.getByLabel("Baseline request").selectOption("browser-baseline");
+  await page.getByLabel("Candidate request").selectOption("browser-candidate");
+  await page.getByRole("button", { name: "Compare requests" }).click();
+  await expect(
+    page.getByText(/2 total groups: 0 compared, 2 incomplete/),
+  ).toBeVisible();
+  await accessible(page);
+  await page
+    .getByRole("link", { name: "Candidate: stopped-obstacle", exact: true })
+    .click();
+  await expect(page.getByText(/No measured scores/)).toBeVisible();
+  await page.getByText("Scenario: stopped-obstacle", { exact: true }).click();
+  await expect(page.locator("details[open]")).toContainText("goal_position_mm");
+  await accessible(page);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Inputs and evidence" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Back to comparison" }).click();
+  await expect(page.getByLabel("Baseline request")).toHaveValue(
+    "browser-baseline",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await accessible(page);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("loading, malformed responses, denied reads, and recovery", async ({
+  page,
+  app,
+}) => {
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/requests?*", async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.goto(app.url);
+  await expect(page.getByRole("status")).toContainText("Loading requests");
+  release();
+  await expect(
+    page.getByRole("heading", { name: "No requests yet" }),
+  ).toBeVisible();
+  await page.unroute("**/api/requests?*");
+  await page.route("**/api/requests?*", (route) =>
+    route.fulfill({ json: { request_ids: ["<script>"] } }),
+  );
+  await page.reload();
+  await expect(page.getByRole("alert")).toContainText("unexpected data");
+  await page.unroute("**/api/requests?*");
+  await page.route("**/api/requests?*", (route) =>
+    route.fulfill({ status: 403, json: { error: "denied" } }),
+  );
+  await page.getByRole("button", { name: "Retry requests" }).click();
+  await expect(page.getByRole("alert")).toContainText("Access was denied");
+  await page.unroute("**/api/requests?*");
+  await page.getByRole("button", { name: "Retry requests" }).click();
+  await expect(
+    page.getByRole("heading", { name: "No requests yet" }),
+  ).toBeVisible();
+  await accessible(page);
+});
+
+test("real baseline to candidate review and cited recording evidence", async ({
+  page,
+  app,
+}, testInfo) => {
+  // This acceptance test deliberately requires the public engine executable.
+  await page.goto(app.url);
+  await create(page, "baseline-review", "baseline", ["smoke", "obstacles"]);
+  await create(page, "candidate-review", "candidate", ["smoke", "obstacles"]);
+  await app.processJobs();
+  await expect(page.getByText("3 of 3", { exact: true })).toBeVisible();
+  await page.goto(
+    app.url +
+      "#view=compare&baseline=baseline-review&candidate=candidate-review",
+  );
+  await expect(page.getByText(/3 total groups: 3 compared/)).toBeVisible();
+  const row = page.getByRole("row").filter({
+    has: page.getByRole("link", {
+      name: "Candidate: stopped-obstacle",
+      exact: true,
+    }),
+  });
+  await expect(row).toContainText("0 → 1 · Δ +1");
+  await expect(row).toContainText("regression");
+  await accessible(page);
+  await page.screenshot({
+    path: testInfo.outputPath("comparison.png"),
+    fullPage: true,
+  });
+  await row
+    .getByRole("link", { name: "Candidate: stopped-obstacle", exact: true })
+    .click();
+  const collision = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: /collision count/ }) });
+  await collision.getByRole("link", { name: /Tick/ }).first().click();
+  await expect(page.getByText(/Time in recording:/)).toBeVisible();
+  await accessible(page);
+  await page.screenshot({
+    path: testInfo.outputPath("evidence.png"),
+    fullPage: true,
+  });
+  const files = await readdir(join(app.exchange, "results"));
+  const schema = z.object({
+    correlation_id: z.string(),
+    bag: z.object({ path: z.string() }),
+  });
+  for (const file of files) {
+    const value: unknown = JSON.parse(
+      await readFile(join(app.exchange, "results", file), "utf8"),
+    );
+    const result = schema.parse(value);
+    if (result.correlation_id === "candidate-review")
+      await rename(
+        join(app.exchange, result.bag.path),
+        join(app.directory, file + ".removed"),
+      );
+  }
+  await expect(page.getByText(/No measured scores/)).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("unavailable");
+  await page.getByRole("link", { name: "Back to comparison" }).click();
+  await expect(
+    page.getByText(/3 total groups: 0 compared, 3 incomplete/),
+  ).toBeVisible();
+  await expect(
+    page.getByText("0 metric regressions", { exact: true }),
+  ).toBeVisible();
+});

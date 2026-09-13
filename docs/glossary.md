@@ -12,6 +12,7 @@ Some terms describe the planned review workflow; the README states which behavio
 | Bag | A saved sequence of simulation records. |
 | Baseline | The reference controller or request used for a comparison. |
 | Binary | The executable file produced by the Go build. |
+| Chromium | The browser engine used by the automated review tests. |
 | Candidate | The controller or request compared with the baseline. |
 | Catalog | The stored test definitions, templates, controller references, and ordered groups. |
 | CLI | Command-line interface: commands and options entered in a shell. |
@@ -24,6 +25,7 @@ Some terms describe the planned review workflow; the README states which behavio
 | Denominator | The total number of selected items against which a count is interpreted. |
 | DuckDB | The local SQL query engine used to compare published metric data. |
 | Exchange directory | A local directory containing public job, event, recording, and result files. |
+| Evidence tick | A recording step cited by a measured result. |
 | Event | An immutable notice describing one observed execution transition. |
 | Execution | One identified simulation run. |
 | Exit code | The number that reports command success or failure to the shell. |
@@ -44,6 +46,7 @@ Some terms describe the planned review workflow; the README states which behavio
 | Node.js | The runtime used by the web build tools. |
 | npm | The package manager used to install and run the web tools. |
 | Outbox | Saved outgoing files that remain pending until durable publication is acknowledged. |
+| Playwright | The tool that runs browser acceptance tests. |
 | Package | A group of code files with a shared build and dependency boundary. |
 | React | The library used to render the browser interface. |
 | Publication | Making a complete, immutable file visible under its final name. |
@@ -64,7 +67,9 @@ Some terms describe the planned review workflow; the README states which behavio
 | STE | Simplified Technical English, the writing method defined by ASD-STE100. |
 | Suite | An ordered group of tests. |
 | Synthetic example | An example created without private recordings or customer data. |
+| TanStack Query | The browser library that manages HTTP reads, retries, and data freshness. |
 | Test | One scenario, one run template, and one analysis template. |
 | TypeScript | The language used to check browser code before it runs. |
 | Vite | The tool that builds and previews the web package. |
+| Zod | The library that validates browser response data before use. |
 | Yamata | The independent execution project that owns simulations, recordings, and scores. |

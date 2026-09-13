@@ -2,7 +2,7 @@ GO ?= go
 NPM ?= npm
 export GOWORK := off
 
-.PHONY: build build-cli build-web test check fmt preview clean install-duckdb
+.PHONY: build build-cli build-web test check fmt preview clean install-duckdb test-web
 
 install-duckdb:
 	sh scripts/install-duckdb.sh
@@ -17,6 +17,9 @@ build-web:
 
 test:
 	$(GO) test ./cmd/... ./internal/... ./compatibility/...
+
+test-web: build
+	cd web && $(NPM) test
 
 check:
 	@test -z "$$(gofmt -l cmd internal compatibility)" || { gofmt -l cmd internal compatibility; exit 1; }
